@@ -39,9 +39,18 @@
         <!-- FORMULÁRIO DE LOGIN (SEGUNDO ACESSO EM DIANTE) -->
         <form id="form-login" class="auth-form" onsubmit="executarLogin(event)">
             <div class="input-group">
-                <label for="usuario-login">Nome de Usuário </label>
-                <input type="text" id="usuario-login" required>
+                <label for="usuario-login">Patente e Nome</label>
+                <input type="text" id="usuario-login" autocomplete="username" required>
             </div>
+
+            <div class="input-group">
+                <label for="senha-login-pessoal">Informe sua Senha Pessoal</label>
+                <div class="password-wrapper">
+                    <input type="password" id="senha-login-pessoal" autocomplete="current-password" required>
+                    <button type="button" class="toggle-password" onclick="toggleSenhaLogin(this)">👁️</button>
+                </div>
+            </div>
+
             <button type="submit" class="btn-submit">Entrar no Sistema</button>
         </form>
 
@@ -70,12 +79,30 @@
                 </div>
             </div>
 
-            <!-- Campo de Senha Geral com o Olhinho configurado -->
+            <!-- Senha geral usada apenas para homologar o tipo de cadastro -->
             <div class="input-group">
-                <label for="senha-cadastro-batalhao">Senha  Batalhão</label>
+                <label for="senha-cadastro-batalhao">Senha do Batalhão</label>
                 <div class="password-wrapper">
-                    <input type="password" id="senha-cadastro-batalhao" required>
-                    <button type="button" class="toggle-password" onclick="toggleSenha()">👁️</button>
+                    <input type="password" id="senha-cadastro-batalhao" autocomplete="off" required>
+                    <button type="button" class="toggle-password" onclick="toggleSenha(this)">👁️</button>
+                </div>
+            </div>
+
+            <!-- Senha individual do policial -->
+            <div class="input-group">
+                <label for="senha-pessoal-cadastro">Registre sua Senha Pessoal</label>
+                <div class="password-wrapper">
+                    <input type="password" id="senha-pessoal-cadastro" autocomplete="new-password" minlength="6" required>
+                    <button type="button" class="toggle-password" onclick="toggleSenhaPessoal(this)">👁️</button>
+                </div>
+                <small style="display:block;margin-top:6px;opacity:.8;">Use uma senha pessoal com no mínimo 6 caracteres. Ela será usada nos próximos acessos.</small>
+            </div>
+
+            <div class="input-group">
+                <label for="senha-pessoal-confirmacao">Confirme sua Senha Pessoal</label>
+                <div class="password-wrapper">
+                    <input type="password" id="senha-pessoal-confirmacao" autocomplete="new-password" minlength="6" required>
+                    <button type="button" class="toggle-password" onclick="toggleSenhaConfirmacao(this)">👁️</button>
                 </div>
             </div>
 
@@ -208,73 +235,111 @@
             }
         }
 
+        // ============================================================
+        // AUTENTICAÇÃO DO BPE TÁTICO
+        // A senha pessoal é armazenada somente como hash SHA-256.
+        // A senha do batalhão (altocomando/membros) continua existindo
+        // apenas para homologar o PRIMEIRO cadastro.
+        // ============================================================
+
+        async function gerarHashSenha(senha) {
+            const dados = new TextEncoder().encode(senha);
+            const buffer = await crypto.subtle.digest('SHA-256', dados);
+            return Array.from(new Uint8Array(buffer))
+                .map(byte => byte.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
         // LÓGICA DE LOGIN (SEGUNDO ACESSO EM DIANTE)
-               // LÓGICA DE LOGIN INTEGRADA COM CARGOS DINÂMICOS
         async function executarLogin(event) {
             event.preventDefault();
-            await sincronizarBancoBPE();
-            const entrada = document.getElementById('usuario-login').value.trim();
-            
-            if (!entrada) {
-                alert("⚠️ Por favor, digite seu usuário cadastrado!");
+
+            const ok = await sincronizarBancoBPE();
+            if (!ok) {
+                alert("❌ Não foi possível conectar ao banco de dados. Tente novamente em alguns segundos.");
                 return;
             }
 
-            // Atalho clássico de emergência do Comando Supremo
-            if (entrada === "altocomando") {
-                localStorage.setItem('usuarioLogado', 'Alto Comando');
-                localStorage.setItem('cargoUsuario', 'coronel');
-                alert("✨ ALTO COMANDO reconhecido! Entrando no painel supremo...");
-                window.location.href = "painel.html";
+            const entrada = document.getElementById('usuario-login').value.trim();
+            const senhaPessoal = document.getElementById('senha-login-pessoal').value;
+
+            if (!entrada || !senhaPessoal) {
+                alert("⚠️ Informe sua patente/nome e sua senha pessoal.");
                 return;
             }
 
             const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
             const bancoGeral = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
-            
-            const usuarioEncontrado = usuarios.find(u => u.nome.toLowerCase() === entrada.toLowerCase());
 
-            if (usuarioEncontrado) {
-                localStorage.setItem('usuarioLogado', usuarioEncontrado.nome);
-                localStorage.setItem('idLogado', usuarioEncontrado.id);
-                
-                // Caça qual é o cargo/patente real dele na tabela da hierarquia
-                const cadastroHierarquia = bancoGeral.find(u => u.usuario.toLowerCase() === entrada.toLowerCase());
-                const cargoReal = cadastroHierarquia ? cadastroHierarquia.cargo : (usuarioEncontrado.estagio === 'sim' ? 'estagio' : 'membro-comum');
-                
-                localStorage.setItem('cargoUsuario', cargoReal);
-                
-                alert(`🔓 Login autorizado! Bem-vindo de volta, ${usuarioEncontrado.nome}.`);
-                window.location.href = "painel.html";
-            } else {
-                alert(`❌ ERRO: O usuário "${entrada}" não consta no sistema.\n\nSe esta é sua primeira vez no site, vá na aba "Primeiro Acesso" para fazer o registro.`);
+            const usuarioEncontrado = usuarios.find(u =>
+                String(u.nome || '').trim().toLowerCase() === entrada.toLowerCase()
+            );
+
+            if (!usuarioEncontrado) {
+                alert(`❌ ERRO: O usuário "${entrada}" não consta no sistema.`);
+                return;
             }
+
+            // Registros antigos não possuem senha pessoal.
+            if (!usuarioEncontrado.senhaPessoalHash) {
+                alert("⚠️ Este cadastro ainda não possui uma senha pessoal.\n\nO policial precisa realizar o cadastro/atualização da senha pessoal antes de acessar o painel.");
+                return;
+            }
+
+            const hashInformado = await gerarHashSenha(senhaPessoal);
+            if (hashInformado !== usuarioEncontrado.senhaPessoalHash) {
+                alert("❌ SENHA PESSOAL INCORRETA.\n\nO acesso não foi autorizado.");
+                return;
+            }
+
+            localStorage.setItem('usuarioLogado', usuarioEncontrado.nome);
+            localStorage.setItem('idLogado', usuarioEncontrado.id);
+
+            const cadastroHierarquia = bancoGeral.find(u =>
+                String(u.usuario || '').trim().toLowerCase() === entrada.toLowerCase()
+            );
+            const cargoReal = cadastroHierarquia
+                ? cadastroHierarquia.cargo
+                : (usuarioEncontrado.estagio === 'sim' ? 'estagio' : 'membro-comum');
+
+            localStorage.setItem('cargoUsuario', cargoReal);
+
+            alert(`🔓 LOGIN AUTORIZADO!\nBem-vindo de volta, ${usuarioEncontrado.nome}.`);
+            window.location.href = "painel.html";
         }
 
         // LÓGICA DE CADASTRO (PRIMEIRO ACESSO)
-              // LÓGICA DE CADASTRO ATUALIZADA (COM TRAVA DE SENHA ALTOCOMANDO)
-               // LÓGICA DE CADASTRO SEM PROMPTS: FILTRO DE SENHA BASEADO NA PATENTE DIGITADA
         async function executarCadastro(event) {
             event.preventDefault();
-            await sincronizarBancoBPE();
+
+            const ok = await sincronizarBancoBPE();
+            if (!ok) {
+                alert("❌ Não foi possível conectar ao banco de dados. Tente novamente em alguns segundos.");
+                return;
+            }
+
             const nome = document.getElementById('nome-cadastro').value.trim();
             const id = document.getElementById('id-cadastro').value.trim();
             const estagio = document.querySelector('input[name="estagio"]:checked').value;
             const senhaBatalhao = document.getElementById('senha-cadastro-batalhao').value.trim();
+            const senhaPessoal = document.getElementById('senha-pessoal-cadastro').value;
+            const senhaPessoalConfirmacao = document.getElementById('senha-pessoal-confirmacao').value;
 
-            // Transforma o nome digitado em letras minúsculas para escanear a patente digitada
+            if (senhaPessoal.length < 6) {
+                alert("❌ A senha pessoal precisa ter no mínimo 6 caracteres.");
+                return;
+            }
+
+            if (senhaPessoal !== senhaPessoalConfirmacao) {
+                alert("❌ A confirmação da senha pessoal não confere.");
+                return;
+            }
+
             const nomeMinusculo = nome.toLowerCase();
             let cargoDefinido = "membro-comum";
 
-            // 1. CHECAGEM DO ALTO COMANDO (MÁGICA AUTOMÁTICA)
-                 // CORREÇÃO OPERACIONAL: LEITURA PRECISA E ALERT LIMPO SEM REPETIÇÕES
+            // A senha do batalhão continua sendo a chave de homologação do cadastro.
             if (senhaBatalhao === "altocomando") {
-                if (senhaBatalhao !== "altocomando") {
-                    alert("❌ HOMOLOGAÇÃO NEGADA:\nVocê inseriu uma patente de ALTO COMANDO, mas digitou a senha incorreta.");
-                    return;
-                }
-                
-                // CORREÇÃO DE FILTRO: Checa primeiro a patente mais longa para não confundir Tenente-Coronel com Major ou Tenente
                 if (nomeMinusculo.includes("tenente-coronel") || nomeMinusculo.includes("tenentecoronel") || nomeMinusculo.includes("tenente coronel")) {
                     cargoDefinido = "tenente-coronel";
                 } else if (nomeMinusculo.includes("coronel")) {
@@ -282,55 +347,86 @@
                 } else {
                     cargoDefinido = "major";
                 }
-            } else {
-                if (senhaBatalhao !== "membros") {
-                    alert("❌ ACESSO NEGADO:\nA senha do batalhão está incorreta!");
-                    return;
-                }
+            } else if (senhaBatalhao === "membros") {
                 cargoDefinido = estagio === 'sim' ? 'estagio' : 'membro-comum';
-            }
-
-            // [Mantenha a parte do meio que salva nos bancos 'usuariosBPE' e 'bancoUsuariosBPE' igual]
-            const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
-            const bancoUsuariosGerais = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
-            if (usuarios.some(u => u.nome.toLowerCase() === nome.toLowerCase())) {
-                alert(`⚠️ ATENÇÃO: O policial "${nome}" já possui um cadastro ativo no sistema!`);
+            } else {
+                alert("❌ ACESSO NEGADO:\nA senha do batalhão está incorreta!");
                 return;
             }
-            usuarios.push({ nome, id, estagio });
+
+            const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
+            const bancoUsuariosGerais = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
+
+            if (usuarios.some(u => String(u.nome || '').toLowerCase() === nome.toLowerCase())) {
+                alert(`⚠️ ATENÇÃO: O policial "${nome}" já possui um cadastro ativo no sistema.\n\nSe este é o seu cadastro antigo, ele precisa receber uma senha pessoal antes do primeiro login com a nova segurança.`);
+                return;
+            }
+
+            const senhaPessoalHash = await gerarHashSenha(senhaPessoal);
+
+            // A senha pessoal NUNCA é salva em texto puro.
+            usuarios.push({
+                nome,
+                id,
+                estagio,
+                senhaPessoalHash,
+                senhaPessoalVersao: 1
+            });
+
             localStorage.setItem('usuariosBPE', JSON.stringify(usuarios));
             await bpeSalvarNuvem('usuariosBPE', usuarios);
-            bancoUsuariosGerais.push({ id: id, usuario: nome, patente: cargoDefinido.toUpperCase(), cargo: cargoDefinido });
+
+            bancoUsuariosGerais.push({
+                id: id,
+                usuario: nome,
+                patente: cargoDefinido.toUpperCase(),
+                cargo: cargoDefinido
+            });
+
             localStorage.setItem('bancoUsuariosBPE', JSON.stringify(bancoUsuariosGerais));
             await bpeSalvarNuvem('bancoUsuariosBPE', bancoUsuariosGerais);
+
             localStorage.setItem('usuarioLogado', nome);
             localStorage.setItem('idLogado', id);
             localStorage.setItem('cargoUsuario', cargoDefinido);
 
-            // ALERT TOTALMENTE LIMPO E SEM REDUNDÂNCIAS
             if (senhaBatalhao === "altocomando") {
-                alert(`👑 ALTO COMANDO HOMOLOGADO:\nOficial: ${nome}\n\nEntrando no painel operacional com poder supremo...`);
+                alert(`👑 ALTO COMANDO HOMOLOGADO:\nOficial: ${nome}\n\nSua senha pessoal foi registrada. Entrando no painel operacional com poder supremo...`);
             } else {
-                alert(`✅ CADASTRO HOMOLOGADO:\nPolicial: ${nome}\nID: ${id}\n\nEntrando no painel de patrulha...`);
+                alert(`✅ CADASTRO HOMOLOGADO:\nPolicial: ${nome}\nID: ${id}\n\nSua senha pessoal foi registrada. Entrando no painel de patrulha...`);
             }
-            
+
             window.location.href = "painel.html";
         }
 
 
-
-        // Lógica do botão do Olhinho
-        function toggleSenha() {
-            const campoSenha = document.getElementById('senha-cadastro-batalhao');
-            const botaoOlho = document.querySelector('.toggle-password');
-            
-            if (campoSenha.type === 'password') {
-                campoSenha.type = 'text';
-                botaoOlho.textContent = '🙈';
+        // Lógica dos botões do Olhinho
+        function alternarCampoSenha(idCampo, botao) {
+            const campo = document.getElementById(idCampo);
+            if (!campo) return;
+            if (campo.type === 'password') {
+                campo.type = 'text';
+                botao.textContent = '🙈';
             } else {
-                campoSenha.type = 'password';
-                botaoOlho.textContent = '👁️';
+                campo.type = 'password';
+                botao.textContent = '👁️';
             }
+        }
+
+        function toggleSenha(botao) {
+            alternarCampoSenha('senha-cadastro-batalhao', botao);
+        }
+
+        function toggleSenhaPessoal(botao) {
+            alternarCampoSenha('senha-pessoal-cadastro', botao);
+        }
+
+        function toggleSenhaConfirmacao(botao) {
+            alternarCampoSenha('senha-pessoal-confirmacao', botao);
+        }
+
+        function toggleSenhaLogin(botao) {
+            alternarCampoSenha('senha-login-pessoal', botao);
         }
     </script>
 
