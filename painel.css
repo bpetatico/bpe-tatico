@@ -1,0 +1,598 @@
+@import url('https://googleapis.com');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: #121212;
+    color: #ffffff;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* ==========================================
+   📱 SIDEBAR: MENU LATERAL ESQUERDO FIXO
+   ========================================== */
+.sidebar {
+    width: 260px;
+    background-color: #1c1c1e;
+    border-right: 1px solid #2c2c2e;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    position: fixed;
+    height: 100vh;
+    z-index: 10;
+}
+
+.sidebar-logo {
+    text-align: center;
+    margin-bottom: 35px;
+    border-bottom: 1px solid #2c2c2e;
+    padding-bottom: 20px;
+}
+
+.star-icon {
+    font-size: 28px;
+    color: #ffcc00;
+}
+
+.sidebar-logo h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-top: 5px;
+}
+
+.user-badge {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.sidebar-logo p {
+    font-size: 14px;
+    color: #8e8e93;
+    font-weight: 600;
+}
+
+.badge-estagio {
+    background-color: #ff6b00;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+}
+
+.menu-btn {
+    background: transparent;
+    border: none;
+    color: #aeaea3;
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.menu-btn:hover {
+    background-color: #2c2c2e;
+    color: #ffffff;
+}
+
+.menu-btn.active {
+    background-color: #0052cc;
+    color: #ffffff;
+}
+
+.btn-vip {
+    border: 1px dashed #ffcc00;
+    color: #ffcc00;
+}
+
+.btn-vip:hover {
+    background-color: rgba(255, 204, 0, 0.1);
+    color: #ffcc00;
+}
+
+.sidebar-footer {
+    border-top: 1px solid #2c2c2e;
+    padding-top: 15px;
+}
+
+.btn-logout {
+    width: 100%;
+    background: #2c2c2e;
+    border: none;
+    color: #ff1744;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-logout:hover {
+    background: #ff1744;
+    color: white;
+}
+
+/* ==========================================
+   🖥️ ÁREA CENTRAL DE CONTEÚDO
+   ========================================== */
+.main-content {
+    flex: 1;
+    margin-left: 260px;
+    padding: 40px;
+}
+
+/* Força as abas a ocuparem apenas o espaço necessário sem vazar */
+.aba-conteudo {
+    width: 100%;
+    display: block;
+}
+
+.main-header {
+    margin-bottom: 30px;
+    border-bottom: 1px solid #2c2c2e;
+    padding-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.main-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.date-today {
+    background-color: #2c2c2e;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8e8e93;
+}
+
+/* GRID DOS BLOCOS DO MURAL */
+.mural-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+}
+
+.card {
+    background-color: #1c1c1e;
+    border: 1px solid #2c2c2e;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.card-header-gold { background: linear-gradient(90deg, #ffcc00, #b38f00); color: #121212; padding: 12px 20px; font-weight: 700; font-size: 14px; }
+.card-header-blue { background: linear-gradient(90deg, #0052cc, #003d99); color: white; padding: 12px 20px; font-weight: 700; font-size: 14px; }
+.card-header-gray { background: #2c2c2e; color: #ffffff; padding: 12px 20px; font-weight: 700; font-size: 14px; border-bottom: 1px solid #3a3a3c; }
+
+/* ESTILO DO CARD DE POLICIAL DESTAQUE */
+.destaque-body {
+    display: flex;
+    padding: 25px;
+    gap: 20px;
+    align-items: center;
+}
+
+.police-avatar {
+    font-size: 50px;
+    background-color: #2c2c2e;
+    width: 90px;
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid #ffcc00;
+}
+
+.destaque-info h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffcc00;
+    margin-bottom: 8px;
+}
+
+.legenda-comentario {
+    font-size: 13px;
+    color: #aeaea3;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+/* ESTILO DO TOP 3 APREENSÕES */
+.ranking-list {
+    list-style: none;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.ranking-list li {
+    display: flex;
+    align-items: center;
+    background-color: #2c2c2e;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.rank-pos {
+    color: #ffcc00;
+    font-size: 16px;
+    font-weight: 700;
+    width: 35px;
+}
+
+.rank-item {
+    flex: 1;
+    color: #ffffff;
+}
+
+.rank-qtd {
+    color: #00e676;
+    font-weight: 700;
+}
+
+/* ESTILO DOS BOLETINS INFORMATIVOS */
+.card-boletins {
+    grid-column: span 2;
+}
+
+.boletins-feed {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.boletim-item {
+    border-left: 3px solid #0052cc;
+    padding-left: 15px;
+}
+
+.boletim-meta {
+    font-size: 11px;
+    color: #8e8e93;
+    font-weight: 600;
+}
+
+.boletim-item h4 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 4px 0 6px 0;
+}
+
+.boletim-item p {
+    font-size: 13px;
+    color: #aeaea3;
+    line-height: 1.5;
+}
+
+/* ==========================================
+   🧩 ESTILOS EXCLUSIVOS DO PONTO ELETRÔNICO
+   ========================================== */
+.ponto-container-box {
+    max-width: 600px;
+    margin: 40px auto;
+}
+
+.ponto-body {
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+}
+
+.ponto-dados-usuario {
+    width: 100%;
+    background-color: #2c2c2e;
+    padding: 15px 20px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    border-left: 4px solid #0052cc;
+}
+
+.ponto-acoes {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+.status-badge {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.fechado {
+    background-color: rgba(255, 23, 68, 0.1);
+    color: #ff1744;
+    border: 1px solid #ff1744;
+}
+
+.status-badge.aberto {
+    background-color: rgba(0, 230, 118, 0.1);
+    color: #00e676;
+    border: 1px solid #00e676;
+}
+
+.timer-display {
+    font-size: 48px;
+    font-weight: 700;
+    font-family: monospace;
+    color: #ffffff;
+    letter-spacing: 2px;
+    text-shadow: 0px 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.ponto-logs-horarios {
+    width: 100%;
+    background-color: #2c2c2e;
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.ponto-logs-horarios p {
+    display: flex;
+    justify-content: space-between;
+    color: #aeaea3;
+}
+
+.ponto-logs-horarios span {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.btn-ponto {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    letter-spacing: 0.5px;
+}
+
+.btn-ponto:active {
+    transform: scale(0.98);
+}
+
+.btn-ponto.iniciar {
+    background-color: #00e676;
+    color: #121212;
+}
+
+.btn-ponto.iniciar:hover {
+    background-color: #00b359;
+}
+
+.btn-ponto.encerrar {
+    background-color: #ff1744;
+    color: #ffffff;
+}
+
+.btn-ponto.encerrar:hover {
+    background-color: #b30025;
+}
+
+/* ==========================================
+   📜 FEED DE HISTÓRICO PÚBLICO DE PLANTÃO
+   ========================================== */
+.historico-feed {
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-height: 450px;
+    overflow-y: auto;
+}
+
+.sem-registro {
+    text-align: center;
+    color: #8e8e93;
+    font-size: 14px;
+    padding: 20px;
+}
+
+.ponto-post-publico {
+    background-color: #2c2c2e;
+    border-radius: 8px;
+    padding: 16px 20px;
+    border-left: 5px solid #00e676;
+    border-bottom: 1px solid #3a3a3c;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.ponto-post-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 6px;
+}
+
+.ponto-post-data {
+    color: #a1a1aa;
+    font-size: 13px;
+    font-weight: 600;
+    background-color: #1c1c1e;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.ponto-post-detalhes {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #d1d1d6;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.ponto-post-detalhes span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ponto-post-total {
+    color: #ffcc00 !important;
+    font-weight: 700;
+    background-color: rgba(255, 204, 0, 0.1);
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 204, 0, 0.2);
+}
+
+/* ==========================================
+   🚨 TRANCAS TÉCNICAS DE ISOLAMENTO DE ABAS
+   ========================================== */
+.hidden {
+    display: none !important;
+}
+/* ==========================================
+   📊 TABELAS DE FISCALIZAÇÃO DE RANKING
+   ========================================== */
+.tabela-scroll {
+    width: 100%;
+    overflow-x: auto;
+    padding: 15px;
+}
+
+.tabela-tatico {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    text-align: left;
+}
+
+.tabela-tatico th {
+    background-color: #2c2c2e;
+    color: #aeaea3;
+    padding: 12px 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 12px;
+    border-bottom: 2px solid #3a3a3c;
+}
+
+.tabela-tatico td {
+    padding: 14px 16px;
+    color: #ffffff;
+    border-bottom: 1px solid #2c2c2e;
+}
+
+/* Deixa as linhas zebradas (uma escura, uma cinza) para facilitar leitura */
+.tabela-tatico tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.tabela-tatico tbody tr:hover {
+    background-color: rgba(0, 82, 204, 0.1); /* Brilha azul sutil ao passar o mouse */
+}
+/* ==========================================
+   📸 ESTILOS DO PAINEL DE APREENSÕES (OCR)
+   ========================================== */
+.upload-dropzone {
+    width: 100%;
+    border: 2px dashed #0052cc;
+    background-color: rgba(0, 82, 204, 0.05);
+    border-radius: 8px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-dropzone:hover {
+    background-color: rgba(0, 82, 204, 0.1);
+    border-color: #00e676;
+}
+
+.upload-icon {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.ocr-preview-box {
+    width: 100%;
+    background-color: #2c2c2e;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 4px solid #ffcc00;
+    text-align: left;
+}
+
+.ocr-itens-detectados {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.ocr-row {
+    display: flex;
+    justify-content: space-between;
+    background-color: #1c1c1e;
+    padding: 10px 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.ocr-row span.item-nome { color: #ffffff; }
+.ocr-row span.item-qtd { color: #00e676; font-weight: 700; }

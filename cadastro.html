@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPE - OPERACIONAL | Acesso</title>
+     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%0A%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%23111%22%2F%3E%0A%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2243%22%20fill%3D%22%23111%22%20stroke%3D%22%23d6ad00%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M50%208%20L58%2055%20L50%2092%20L42%2055%20Z%22%20fill%3D%22%23ddd%22%20stroke%3D%22%23ffdf55%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M50%2018%20L50%2078%22%20stroke%3D%22%23555%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%2246%22%20y%3D%2254%22%20width%3D%228%22%20height%3D%2220%22%20rx%3D%222%22%20fill%3D%22%23151515%22%20stroke%3D%22%23d6ad00%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M28%2043%20C28%2026%2038%2018%2050%2018%20C62%2018%2072%2026%2072%2043%20L68%2058%20C66%2064%2060%2067%2057%2069%20L57%2076%20L43%2076%20L43%2069%20C40%2067%2034%2064%2032%2058%20Z%22%20fill%3D%22%23ddd%22%20stroke%3D%22%23ffdf55%22%20stroke-width%3D%222%22%2F%3E%0A%3Cpath%20d%3D%22M34%2043%20Q41%2036%2047%2043%20L45%2052%20Q39%2055%2034%2050%20Z%22%20fill%3D%22%23090909%22%2F%3E%0A%3Cpath%20d%3D%22M53%2043%20Q59%2036%2066%2043%20L66%2050%20Q61%2055%2055%2052%20Z%22%20fill%3D%22%23090909%22%2F%3E%0A%3Cpath%20d%3D%22M50%2048%20L45%2058%20L50%2061%20L55%2058%20Z%22%20fill%3D%22%23111%22%2F%3E%0A%3Crect%20x%3D%2240%22%20y%3D%2261%22%20width%3D%2220%22%20height%3D%229%22%20rx%3D%222%22%20fill%3D%22%23111%22%2F%3E%0A%3Cpath%20d%3D%22M45%2062v7%20M50%2062v7%20M55%2062v7%22%20stroke%3D%22%23ddd%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M27%2028%20Q50%2010%2073%2028%20L69%2035%20Q50%2027%2031%2035%20Z%22%20fill%3D%22%23171717%22%20stroke%3D%22%23d6ad00%22%20stroke-width%3D%222%22%2F%3E%0A%3Ccircle%20cx%3D%2250%22%20cy%3D%2223%22%20r%3D%225%22%20fill%3D%22%23d6ad00%22%2F%3E%0A%3Cpath%20d%3D%22M50%2019v8%20M46%2023h8%22%20stroke%3D%22%23111%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E">
+    <!-- Link para a sua folha de estilo atualizada -->
+    <link rel="stylesheet" href="cadastro.css">
+</head>
+<body>
+
+     <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="bpe-tactical-logo" aria-label="Logo BPE Tático — Caveira" title="BPE TÁTICO • CAVEIRA">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Caveira tática com faca">
+                        <circle cx="50" cy="50" r="46" fill="#111" stroke="#d6ad00" stroke-width="2"/>
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="#3a3a3c" stroke-width="1.5"/>
+                        <path d="M50 10 L58 55 L50 91 L42 55 Z" fill="#d8d8d8" stroke="#ffdf55" stroke-width="1.5"/>
+                        <path d="M50 18 L50 78" stroke="#4a4a4a" stroke-width="2"/>
+                        <rect x="46" y="54" width="8" height="20" rx="2" fill="#151515" stroke="#d6ad00" stroke-width="1.5"/>
+                        <path d="M28 42 C28 25 38 18 50 18 C62 18 72 25 72 42 L68 58 C66 64 60 67 57 69 L57 76 L43 76 L43 69 C40 67 34 64 32 58 Z" fill="#d9d9d9" stroke="#ffdf55" stroke-width="2"/>
+                        <path d="M34 43 Q41 36 47 43 L45 52 Q39 55 34 50 Z" fill="#0b0b0b"/>
+                        <path d="M53 43 Q59 36 66 43 L66 50 Q61 55 55 52 Z" fill="#0b0b0b"/>
+                        <path d="M50 48 L45 58 L50 61 L55 58 Z" fill="#111"/>
+                        <rect x="40" y="61" width="20" height="9" rx="2" fill="#111" stroke="#555" stroke-width="1"/>
+                        <path d="M45 62v7 M50 62v7 M55 62v7" stroke="#d9d9d9" stroke-width="1.5"/>
+                        <path d="M27 28 Q50 10 73 28 L69 35 Q50 27 31 35 Z" fill="#171717" stroke="#d6ad00" stroke-width="2"/>
+                        <circle cx="50" cy="23" r="5" fill="#d6ad00"/>
+                        <path d="M50 19v8 M46 23h8" stroke="#111" stroke-width="1.5"/>
+                    </svg>
+                </div>
+
+        <div class="tab-container">
+            <button id="tab-login" class="tab-btn active" onclick="mudarAba('login')">Acessar Painel</button>
+            <button id="tab-cadastro" class="tab-btn" onclick="mudarAba('cadastro')">Primeiro Acesso</button>
+        </div>
+
+        <!-- FORMULÁRIO DE LOGIN (SEGUNDO ACESSO EM DIANTE) -->
+        <form id="form-login" class="auth-form" onsubmit="executarLogin(event)">
+            <div class="input-group">
+                <label for="usuario-login">Nome de Usuário </label>
+                <input type="text" id="usuario-login" required>
+            </div>
+            <button type="submit" class="btn-submit">Entrar no Sistema</button>
+        </form>
+
+        <!-- FORMULÁRIO DE CADASTRO (PRIMEIRO ACESSO) -->
+        <form id="form-cadastro" class="auth-form hidden" onsubmit="executarCadastro(event)">
+            <div class="input-group">
+                <label for="nome-cadastro">Nome de Usuário (Patente e Nome)</label>
+                <input type="text" id="nome-cadastro" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="id-cadastro">ID do Jogo</label>
+                <input type="number" id="id-cadastro" required>
+            </div>
+
+            <!-- Bloco de Checks para Estágio Probatório -->
+            <div class="input-group">
+                <label>Está em período de Estágio?</label>
+                <div class="checkbox-group">
+                    <label class="radio-label">
+                        <input type="radio" name="estagio" value="sim" required> Sim
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="estagio" value="nao" checked> Não
+                    </label>
+                </div>
+            </div>
+
+            <!-- Campo de Senha Geral com o Olhinho configurado -->
+            <div class="input-group">
+                <label for="senha-cadastro-batalhao">Senha  Batalhão</label>
+                <div class="password-wrapper">
+                    <input type="password" id="senha-cadastro-batalhao" required>
+                    <button type="button" class="toggle-password" onclick="toggleSenha()">👁️</button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit btn-cadastrar">Registrar no Sistema</button>
+        </form>
+    </div>
+
+
+    <!-- Banco compartilhado BPE Tático — Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const BPE_SUPABASE_URL = "https://eplpkbsdpqkqdjhdrxph.supabase.co";
+        const BPE_SUPABASE_KEY = "sb_publishable_2czuKM0vH23EdhH5_lC7Lg_q2KUbFal";
+        const bpeSupabase = window.supabase.createClient(BPE_SUPABASE_URL, BPE_SUPABASE_KEY);
+        const BPE_SHARED_KEYS = [
+            'usuariosBPE', 'bancoUsuariosBPE', 'historicoPontosBPE', 'rankingApreensoesBPE',
+            'topMateriaisBPE', 'bancoRelatoriosBPE', 'bancoLogsDelecaoBPE', 'bancoAusenciasBPE',
+            'bancoBoletinsBPE', 'bancoSolicitacoesAcessoBPE', 'bancoNecrotecaBPE',
+            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bpePolicialDestaque', 'historiaBPE'
+        ];
+        let bpeBancoPronto = false;
+        let bpeSincronizando = null;
+
+        async function bpeSalvarNuvem(chave, valor) {
+            try {
+                const { error } = await bpeSupabase.from('bpe_store').upsert({
+                    chave,
+                    valor,
+                    atualizado_em: new Date().toISOString()
+                }, { onConflict: 'chave' });
+                if (error) console.error('[BPE] Erro ao salvar', chave, error);
+            } catch (e) {
+                console.error('[BPE] Falha de conexão ao salvar', chave, e);
+            }
+        }
+
+        async function sincronizarBancoBPE(opcoes = {}) {
+            if (bpeSincronizando) return bpeSincronizando;
+            bpeSincronizando = (async () => {
+                try {
+                    const { data, error } = await bpeSupabase.from('bpe_store').select('chave,valor,atualizado_em');
+                    if (error) throw error;
+
+                    const linhas = Array.isArray(data) ? data : [];
+                    const mapa = new Map(linhas.map(x => [x.chave, x]));
+
+                    // Primeira conexão: se o banco estiver vazio, migra o conteúdo local existente.
+                    if (linhas.length === 0) {
+                        for (const chave of BPE_SHARED_KEYS) {
+                            const raw = localStorage.getItem(chave);
+                            if (raw !== null) {
+                                try {
+                                    const valor = JSON.parse(raw);
+                                    await bpeSalvarNuvem(chave, valor);
+                                } catch (_) {}
+                            }
+                        }
+                    } else {
+                        // Banco é a fonte oficial. O cache local só acompanha o Supabase.
+                        for (const chave of BPE_SHARED_KEYS) {
+                            if (mapa.has(chave)) {
+                                localStorage.setItem(chave, JSON.stringify(mapa.get(chave).valor));
+                            }
+                        }
+                    }
+
+                    bpeBancoPronto = true;
+                    return true;
+                } catch (e) {
+                    console.error('[BPE] Não foi possível sincronizar com o Supabase.', e);
+                    bpeBancoPronto = false;
+                    return false;
+                } finally {
+                    bpeSincronizando = null;
+                }
+            })();
+            return bpeSincronizando;
+        }
+
+        async function bpeForcarSincronizacao() {
+            return sincronizarBancoBPE({ force: true });
+        }
+
+        // Atualização periódica: outros usuários passam a aparecer sem precisar fechar o site.
+        setInterval(async () => {
+            if (document.visibilityState === 'visible') {
+                const ok = await sincronizarBancoBPE({ force: true });
+                if (ok && typeof atualizarTabelasGerais === 'function') {
+                    try {
+                        if (typeof renderizarHierarquiaGeral === 'function') renderizarHierarquiaGeral();
+                        if (typeof renderizarBoletinsECommunicados === 'function') renderizarBoletinsECommunicados();
+                        if (typeof renderizarMuralHerois === 'function') renderizarMuralHerois();
+                        if (typeof renderizarMuralRSO === 'function') renderizarMuralRSO();
+                        if (typeof renderizarMuralAusencias === 'function') renderizarMuralAusencias();
+                        if (typeof renderizarNecroteca === 'function') renderizarNecroteca();
+                        if (typeof renderizarHistoriaBPE === 'function') renderizarHistoriaBPE();
+                        atualizarTabelasGerais();
+                    } catch (_) {}
+                }
+            }
+        }, 15000);
+    </script>
+        <script>
+        // Inicializa o banco de dados interno se não existir
+        if (!localStorage.getItem('usuariosBPE')) {
+            localStorage.setItem('usuariosBPE', JSON.stringify([]));
+        }
+
+        // Função para alternar visualmente entre as abas de Login e Cadastro
+        function mudarAba(tipo) {
+            const formLogin = document.getElementById('form-login');
+            const formCadastro = document.getElementById('form-cadastro');
+            const tabLogin = document.getElementById('tab-login');
+            const tabCadastro = document.getElementById('tab-cadastro');
+
+            // Limpa os campos ao trocar de aba para evitar bugs de dados fantasmas
+            formLogin.reset();
+            formCadastro.reset();
+
+            if(tipo === 'login') {
+                formLogin.classList.remove('hidden');
+                formCadastro.classList.add('hidden');
+                tabLogin.classList.add('active');
+                tabCadastro.classList.remove('active');
+            } else {
+                formLogin.classList.add('hidden');
+                formCadastro.classList.remove('hidden');
+                tabLogin.classList.remove('active');
+                tabCadastro.classList.add('active');
+            }
+        }
+
+        // LÓGICA DE LOGIN (SEGUNDO ACESSO EM DIANTE)
+               // LÓGICA DE LOGIN INTEGRADA COM CARGOS DINÂMICOS
+        async function executarLogin(event) {
+            event.preventDefault();
+            await sincronizarBancoBPE();
+            const entrada = document.getElementById('usuario-login').value.trim();
+            
+            if (!entrada) {
+                alert("⚠️ Por favor, digite seu usuário cadastrado!");
+                return;
+            }
+
+            // Atalho clássico de emergência do Comando Supremo
+            if (entrada === "altocomando") {
+                localStorage.setItem('usuarioLogado', 'Alto Comando');
+                localStorage.setItem('cargoUsuario', 'coronel');
+                alert("✨ ALTO COMANDO reconhecido! Entrando no painel supremo...");
+                window.location.href = "painel.html";
+                return;
+            }
+
+            const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
+            const bancoGeral = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
+            
+            const usuarioEncontrado = usuarios.find(u => u.nome.toLowerCase() === entrada.toLowerCase());
+
+            if (usuarioEncontrado) {
+                localStorage.setItem('usuarioLogado', usuarioEncontrado.nome);
+                localStorage.setItem('idLogado', usuarioEncontrado.id);
+                
+                // Caça qual é o cargo/patente real dele na tabela da hierarquia
+                const cadastroHierarquia = bancoGeral.find(u => u.usuario.toLowerCase() === entrada.toLowerCase());
+                const cargoReal = cadastroHierarquia ? cadastroHierarquia.cargo : (usuarioEncontrado.estagio === 'sim' ? 'estagio' : 'membro-comum');
+                
+                localStorage.setItem('cargoUsuario', cargoReal);
+                
+                alert(`🔓 Login autorizado! Bem-vindo de volta, ${usuarioEncontrado.nome}.`);
+                window.location.href = "painel.html";
+            } else {
+                alert(`❌ ERRO: O usuário "${entrada}" não consta no sistema.\n\nSe esta é sua primeira vez no site, vá na aba "Primeiro Acesso" para fazer o registro.`);
+            }
+        }
+
+        // LÓGICA DE CADASTRO (PRIMEIRO ACESSO)
+              // LÓGICA DE CADASTRO ATUALIZADA (COM TRAVA DE SENHA ALTOCOMANDO)
+               // LÓGICA DE CADASTRO SEM PROMPTS: FILTRO DE SENHA BASEADO NA PATENTE DIGITADA
+        async function executarCadastro(event) {
+            event.preventDefault();
+            await sincronizarBancoBPE();
+            const nome = document.getElementById('nome-cadastro').value.trim();
+            const id = document.getElementById('id-cadastro').value.trim();
+            const estagio = document.querySelector('input[name="estagio"]:checked').value;
+            const senhaBatalhao = document.getElementById('senha-cadastro-batalhao').value.trim();
+
+            // Transforma o nome digitado em letras minúsculas para escanear a patente digitada
+            const nomeMinusculo = nome.toLowerCase();
+            let cargoDefinido = "membro-comum";
+
+            // 1. CHECAGEM DO ALTO COMANDO (MÁGICA AUTOMÁTICA)
+                 // CORREÇÃO OPERACIONAL: LEITURA PRECISA E ALERT LIMPO SEM REPETIÇÕES
+            if (senhaBatalhao === "altocomando") {
+                if (senhaBatalhao !== "altocomando") {
+                    alert("❌ HOMOLOGAÇÃO NEGADA:\nVocê inseriu uma patente de ALTO COMANDO, mas digitou a senha incorreta.");
+                    return;
+                }
+                
+                // CORREÇÃO DE FILTRO: Checa primeiro a patente mais longa para não confundir Tenente-Coronel com Major ou Tenente
+                if (nomeMinusculo.includes("tenente-coronel") || nomeMinusculo.includes("tenentecoronel") || nomeMinusculo.includes("tenente coronel")) {
+                    cargoDefinido = "tenente-coronel";
+                } else if (nomeMinusculo.includes("coronel")) {
+                    cargoDefinido = "coronel";
+                } else {
+                    cargoDefinido = "major";
+                }
+            } else {
+                if (senhaBatalhao !== "membros") {
+                    alert("❌ ACESSO NEGADO:\nA senha do batalhão está incorreta!");
+                    return;
+                }
+                cargoDefinido = estagio === 'sim' ? 'estagio' : 'membro-comum';
+            }
+
+            // [Mantenha a parte do meio que salva nos bancos 'usuariosBPE' e 'bancoUsuariosBPE' igual]
+            const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
+            const bancoUsuariosGerais = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
+            if (usuarios.some(u => u.nome.toLowerCase() === nome.toLowerCase())) {
+                alert(`⚠️ ATENÇÃO: O policial "${nome}" já possui um cadastro ativo no sistema!`);
+                return;
+            }
+            usuarios.push({ nome, id, estagio });
+            localStorage.setItem('usuariosBPE', JSON.stringify(usuarios));
+            await bpeSalvarNuvem('usuariosBPE', usuarios);
+            bancoUsuariosGerais.push({ id: id, usuario: nome, patente: cargoDefinido.toUpperCase(), cargo: cargoDefinido });
+            localStorage.setItem('bancoUsuariosBPE', JSON.stringify(bancoUsuariosGerais));
+            await bpeSalvarNuvem('bancoUsuariosBPE', bancoUsuariosGerais);
+            localStorage.setItem('usuarioLogado', nome);
+            localStorage.setItem('idLogado', id);
+            localStorage.setItem('cargoUsuario', cargoDefinido);
+
+            // ALERT TOTALMENTE LIMPO E SEM REDUNDÂNCIAS
+            if (senhaBatalhao === "altocomando") {
+                alert(`👑 ALTO COMANDO HOMOLOGADO:\nOficial: ${nome}\n\nEntrando no painel operacional com poder supremo...`);
+            } else {
+                alert(`✅ CADASTRO HOMOLOGADO:\nPolicial: ${nome}\nID: ${id}\n\nEntrando no painel de patrulha...`);
+            }
+            
+            window.location.href = "painel.html";
+        }
+
+
+
+        // Lógica do botão do Olhinho
+        function toggleSenha() {
+            const campoSenha = document.getElementById('senha-cadastro-batalhao');
+            const botaoOlho = document.querySelector('.toggle-password');
+            
+            if (campoSenha.type === 'password') {
+                campoSenha.type = 'text';
+                botaoOlho.textContent = '🙈';
+            } else {
+                campoSenha.type = 'password';
+                botaoOlho.textContent = '👁️';
+            }
+        }
+    </script>
+
+</body>
+</html>

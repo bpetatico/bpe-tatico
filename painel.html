@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BPE OPERACIONAL | Painel Principal</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%0A%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%23111%22%2F%3E%0A%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2243%22%20fill%3D%22%23111%22%20stroke%3D%22%23d6ad00%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M50%208%20L58%2055%20L50%2092%20L42%2055%20Z%22%20fill%3D%22%23ddd%22%20stroke%3D%22%23ffdf55%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M50%2018%20L50%2078%22%20stroke%3D%22%23555%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%2246%22%20y%3D%2254%22%20width%3D%228%22%20height%3D%2220%22%20rx%3D%222%22%20fill%3D%22%23151515%22%20stroke%3D%22%23d6ad00%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M28%2043%20C28%2026%2038%2018%2050%2018%20C62%2018%2072%2026%2072%2043%20L68%2058%20C66%2064%2060%2067%2057%2069%20L57%2076%20L43%2076%20L43%2069%20C40%2067%2034%2064%2032%2058%20Z%22%20fill%3D%22%23ddd%22%20stroke%3D%22%23ffdf55%22%20stroke-width%3D%222%22%2F%3E%0A%3Cpath%20d%3D%22M34%2043%20Q41%2036%2047%2043%20L45%2052%20Q39%2055%2034%2050%20Z%22%20fill%3D%22%23090909%22%2F%3E%0A%3Cpath%20d%3D%22M53%2043%20Q59%2036%2066%2043%20L66%2050%20Q61%2055%2055%2052%20Z%22%20fill%3D%22%23090909%22%2F%3E%0A%3Cpath%20d%3D%22M50%2048%20L45%2058%20L50%2061%20L55%2058%20Z%22%20fill%3D%22%23111%22%2F%3E%0A%3Crect%20x%3D%2240%22%20y%3D%2261%22%20width%3D%2220%22%20height%3D%229%22%20rx%3D%222%22%20fill%3D%22%23111%22%2F%3E%0A%3Cpath%20d%3D%22M45%2062v7%20M50%2062v7%20M55%2062v7%22%20stroke%3D%22%23ddd%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Cpath%20d%3D%22M27%2028%20Q50%2010%2073%2028%20L69%2035%20Q50%2027%2031%2035%20Z%22%20fill%3D%22%23171717%22%20stroke%3D%22%23d6ad00%22%20stroke-width%3D%222%22%2F%3E%0A%3Ccircle%20cx%3D%2250%22%20cy%3D%2223%22%20r%3D%225%22%20fill%3D%22%23d6ad00%22%2F%3E%0A%3Cpath%20d%3D%22M50%2019v8%20M46%2023h8%22%20stroke%3D%22%23111%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E">
+    <link rel="stylesheet" href="painel.css">
+    <style>
+        /* Ajustes de altíssima qualidade para caixas de texto e layouts expansíveis */
+        .full-width-textarea {
+            width: 100% !important;
+            min-height: 180px;
+            max-height: 400px;
+            background-color: #2c2c2e;
+            border: 1px solid #3a3a3c;
+            border-radius: 8px;
+            padding: 15px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            resize: vertical;
+            line-height: 1.6;
+            margin-top: 5px;
+            overflow-y: auto;
+        }
+        .full-width-textarea:focus { border-color: #0052cc; }
+        .input-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%; }
+        .input-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
+        .form-section-title { font-size: 13px; color: #ffcc00; margin: 25px 0 15px 0; border-bottom: 1px solid #2c2c2e; padding-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .bpe-tactical-logo { width:76px;height:76px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,204,0,.35);border-radius:18px;background:linear-gradient(145deg,#242424,#111);box-shadow:0 8px 24px rgba(0,0,0,.35),inset 0 0 0 2px rgba(255,204,0,.06); }
+        .bpe-tactical-logo svg { width:56px;height:56px;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45)); }
+        .admin-delete-all { background:#4a1118!important;color:#ffb8bf!important;border:1px solid #ff1744!important;padding:8px 12px!important;border-radius:6px!important;font-weight:800!important;cursor:pointer!important;font-size:11px!important; }
+        .admin-delete { background:#ff1744;color:#fff;border:0;padding:6px 10px;border-radius:5px;font-size:10px;font-weight:800;cursor:pointer; }
+        .approval-card { background:#1c1c1e;border:1px solid #3a3a3c;border-radius:8px;padding:14px;margin-bottom:10px; }
+        .necroteca-card { background:linear-gradient(145deg,#171717,#242424);border:1px solid #3d3d3d;border-left:5px solid #777;border-radius:10px;padding:18px;position:relative;overflow:hidden; }
+        .necroteca-card:after { content:'✝';position:absolute;right:18px;top:10px;font-size:56px;color:rgba(255,255,255,.07); }
+        .history-card { background:#1c1c1e;border-left:4px solid #ffcc00;padding:20px;border-radius:8px;white-space:pre-wrap;line-height:1.7;color:#d7d7d7; }
+        .access-lock { max-width:760px;margin:60px auto; text-align:center; }
+        .access-lock .lock-icon { font-size:58px;margin-bottom:10px; }
+        .site-credit { position:fixed; right:12px; bottom:8px; color:#666;font-size:10px;z-index:10;pointer-events:none; }
+
+        /* ===== BPE TÁTICO — ROLAGEM CORRIGIDA ===== */
+        html, body { height:100%; min-height:100%; }
+        body { overflow:hidden !important; }
+        .dashboard-container { height:100vh !important; min-height:100vh !important; overflow:hidden !important; }
+        .sidebar {
+            height:100vh !important;
+            min-height:100vh !important;
+            overflow:hidden !important;
+            display:flex !important;
+            flex-direction:column !important;
+        }
+        .sidebar-logo { flex:0 0 auto; }
+        .sidebar-menu {
+            flex:1 1 auto !important;
+            min-height:0 !important;
+            overflow-y:auto !important;
+            overflow-x:hidden !important;
+            scrollbar-width:thin;
+        }
+        .sidebar-footer {
+            flex:0 0 auto !important;
+            position:relative !important;
+            z-index:20;
+            background:#1c1c1e;
+            border-top:1px solid #2c2c2e;
+            padding-top:8px !important;
+        }
+        #btn-admin {
+            width:100% !important;
+            box-sizing:border-box !important;
+            margin:0 0 7px 0 !important;
+            background:linear-gradient(90deg,#3b2800,#6d5000) !important;
+            color:#ffdf55 !important;
+            border:1px solid #d6ad00 !important;
+            font-weight:900 !important;
+            box-shadow:0 0 12px rgba(214,173,0,.12);
+        }
+        #btn-admin:not(.hidden) { display:block !important; }
+        .main-content {
+            height:100vh !important;
+            min-height:0 !important;
+            overflow-y:auto !important;
+            overflow-x:hidden !important;
+            box-sizing:border-box !important;
+            -webkit-overflow-scrolling:touch;
+        }
+        #content-coronel {
+            min-height:max-content !important;
+            padding-bottom:70px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        
+        <!-- SIDEBAR: MENU LATERAL ESQUERDO FIXO -->
+        <aside class="sidebar">
+            <div class="sidebar-logo">
+                <div class="bpe-tactical-logo" aria-label="Logo BPE Tático — Caveira" title="BPE TÁTICO • CAVEIRA">
+                    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Caveira tática com faca">
+                        <circle cx="50" cy="50" r="46" fill="#111" stroke="#d6ad00" stroke-width="2"/>
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="#3a3a3c" stroke-width="1.5"/>
+                        <path d="M50 10 L58 55 L50 91 L42 55 Z" fill="#d8d8d8" stroke="#ffdf55" stroke-width="1.5"/>
+                        <path d="M50 18 L50 78" stroke="#4a4a4a" stroke-width="2"/>
+                        <rect x="46" y="54" width="8" height="20" rx="2" fill="#151515" stroke="#d6ad00" stroke-width="1.5"/>
+                        <path d="M28 42 C28 25 38 18 50 18 C62 18 72 25 72 42 L68 58 C66 64 60 67 57 69 L57 76 L43 76 L43 69 C40 67 34 64 32 58 Z" fill="#d9d9d9" stroke="#ffdf55" stroke-width="2"/>
+                        <path d="M34 43 Q41 36 47 43 L45 52 Q39 55 34 50 Z" fill="#0b0b0b"/>
+                        <path d="M53 43 Q59 36 66 43 L66 50 Q61 55 55 52 Z" fill="#0b0b0b"/>
+                        <path d="M50 48 L45 58 L50 61 L55 58 Z" fill="#111"/>
+                        <rect x="40" y="61" width="20" height="9" rx="2" fill="#111" stroke="#555" stroke-width="1"/>
+                        <path d="M45 62v7 M50 62v7 M55 62v7" stroke="#d9d9d9" stroke-width="1.5"/>
+                        <path d="M27 28 Q50 10 73 28 L69 35 Q50 27 31 35 Z" fill="#171717" stroke="#d6ad00" stroke-width="2"/>
+                        <circle cx="50" cy="23" r="5" fill="#d6ad00"/>
+                        <path d="M50 19v8 M46 23h8" stroke="#111" stroke-width="1.5"/>
+                    </svg>
+                </div>
+                <h2>BPE TÁTICO</h2>
+                <div style="font-size:10px;color:#d6ad00;font-weight:800;letter-spacing:1.2px;margin-top:-2px;">CAVEIRA</div>
+                <div class="user-badge">
+                    <p id="user-display">Carregando...</p>
+                    <span id="tag-estagio" class="badge-estagio hidden">ESTÁGIO</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <button id="btn-menu-inicio" class="menu-btn active" onclick="navegarAba('inicio')">🏠 Início</button>
+                <button id="btn-menu-herois" class="menu-btn" onclick="navegarAba('herois')">🛡️ Mural dos Heróis</button>
+                <button id="btn-menu-rankings-aba" class="menu-btn" onclick="navegarAba('rankings-aba')">📊 Rankings Gerais</button>
+                <button id="btn-menu-ponto" class="menu-btn" onclick="navegarAba('ponto')">🕒 Bater Ponto</button>
+                <button id="btn-menu-apreensoes" class="menu-btn" onclick="navegarAba('apreensoes')">📦 Apreensões</button>
+                <button id="btn-menu-relatorios" class="menu-btn" onclick="navegarAba('relatorios')">📝 Relatórios</button>
+                <button id="btn-menu-ausencias" class="menu-btn" onclick="navegarAba('ausencias')">📅 Ausências</button>
+                <button id="btn-menu-historia" class="menu-btn" onclick="navegarAba('historia')">📜 História do Batalhão</button>
+                <button id="btn-menu-necroteca" class="menu-btn" onclick="navegarAba('necroteca')">✝️ Necrotério / Memorial</button>
+                <button id="btn-menu-hierarquia" class="menu-btn" onclick="navegarAba('hierarquia')">🎖️ Hierarquia</button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="btn-admin" class="menu-btn btn-vip hidden" onclick="navegarAba('coronel')" style="display:none;">👑 Painel Coronel</button>
+                <button id="btn-menu-acesso" class="menu-btn hidden" onclick="navegarAba('acesso')">🔐 Solicitar / Status de Acesso</button>
+                <button onclick="fazerLogout()" class="btn-logout">🚪 Sair</button>
+            </div>
+        </aside>
+
+        <!-- CONTEÚDO PRINCIPAL (MURAL CENTRAL DINÂMICO E ISOLADO) -->
+        <main class="main-content">
+            <!-- ====== PORTA DE ACESSO ====== -->
+            <div id="content-acesso" class="aba-conteudo hidden">
+                <div class="card access-lock">
+                    <div class="lock-icon">🔐</div>
+                    <h1 style="color:#ffcc00;margin-bottom:10px;">ACESSO AO BPE AGUARDANDO LIBERAÇÃO</h1>
+                    <p id="acesso-status-texto" style="color:#aeaea3;line-height:1.7;">Sua senha foi aceita, porém o acesso operacional ainda precisa ser autorizado pelo Alto Comando.</p>
+                    <div id="acesso-dados-usuario" style="margin:20px 0;background:#1c1c1e;padding:15px;border-radius:8px;color:#fff;"></div>
+                    <button id="btn-solicitar-acesso" class="btn-ponto iniciar" onclick="solicitarAcessoSite()" style="margin:0 auto;max-width:360px;">📨 SOLICITAR LIBERAÇÃO DE ACESSO</button>
+                    <div id="acesso-pendente-box" class="hidden" style="margin-top:18px;color:#ffcc00;font-weight:bold;">⏳ SOLICITAÇÃO ENVIADA. AGUARDE A APROVAÇÃO DO ALTO COMANDO.</div>
+                </div>
+            </div>
+
+            <!-- ====== ABA 1: INÍCIO ====== -->
+            <div id="content-inicio" class="aba-conteudo">
+                <header class="main-header">
+                    <h1>MURAL DE COMANDO | INFORMAÇÕES IMPORTANTES</h1>
+                    <div class="date-today">BOLETIM DIÁRIO</div>
+                </header>
+
+                <div class="mural-grid">
+                    <section class="card card-destaque" style="grid-column: span 2;">
+                        <div class="card-header-gold">🎖️ POLICIAL DESTAQUE DA SEMANA</div>
+                        <div class="destaque-body">
+                            <div class="police-avatar">👮‍♂️</div>
+                            <div class="destaque-info">
+                                <h3 id="nome-destaque">Carregando Destaque...</h3>
+                                <p class="legenda-comentario" id="texto-destaque">Nenhum policial fixado como destaque pelo comando para esta semana ainda.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="card card-ranking" style="grid-column: span 2;">
+                        <div class="card-header-blue">📦 RESUMO AUTOMÁTICO: TOP 3 MATERIAIS APREENDIDOS</div>
+                        <ul class="ranking-list" id="resumo-top3-materiais">
+                            <li><span class="rank-pos">1º</span><span class="rank-item">Nenhum item registrado</span></li>
+                        </ul>
+                    </section>
+
+                    <section class="card card-boletins" style="grid-column: span 2;">
+                        <div class="card-header-gray">📜 AVISOS, BOLETINS INTERNOS & ATUALIZAÇÕES</div>
+                        <div class="boletins-feed" id="feed-boletins-coronel">
+                            <p class="sem-registro">Nenhum aviso ou comunicado oficial publicado recentemente pelo Comando.</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ====== ABA 2: CENTRAL DE RANKINGS PÚBLICOS ====== -->
+            <div id="content-rankings-aba" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>ESTATÍSTICAS E RANKINGS DO BATALHÃO</h1>
+                    <div class="date-today">FISCALIZAÇÃO GERAL</div>
+                </header>
+
+                <div class="mural-grid">
+                    <section class="card" style="grid-column: span 2;">
+                        <div class="card-header-blue">🥇 RANKING DE APREENSÕES (INDIVIDUAL)</div>
+                        <div class="tabela-scroll">
+                            <table class="tabela-tatico">
+                                <thead>
+                                    <tr>
+                                        <th>Posição</th>
+                                        <th>Policial / ID</th>
+                                        <th>Total de Apreensões</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-ranking-apreensoes">
+                                    <tr><td colspan="3" class="sem-registro">Nenhum dado computado na semana.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="card" style="grid-column: span 2;">
+                        <div class="card-header-gold">📦 MONTANTE GERAL ACUMULADO DE MATERIAIS (BATALHÃO)</div>
+                        <div class="tabela-scroll">
+                            <table class="tabela-tatico">
+                                <thead>
+                                    <tr>
+                                        <th>Item Operacional</th>
+                                        <th>Total Confiscado (Geral)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-ranking-materiais-coletivo">
+                                    <tr><td colspan="2" class="sem-registro">Nenhum material catalogado na semana.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="card" style="grid-column: span 2;">
+                        <div class="card-header-gray">🕒 RANKING DE ATIVIDADE (POLICIAIS MAIS PRESENTES)</div>
+                        <div class="tabela-scroll">
+                            <table class="tabela-tatico">
+                                <thead>
+                                    <tr>
+                                        <th>Posição</th>
+                                        <th>Policial / ID</th>
+                                        <th>Último Ponto Aberto</th>
+                                        <th>Total de Horas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-ranking-atividade">
+                                    <tr><td colspan="4" class="sem-registro">Nenhum plantão registrado na semana.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </div>
+            <!-- ====== ABA 4: BATER PONTO ====== -->
+            <div id="content-ponto" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>CONTROLE DE PONTO ELETRÔNICO</h1>
+                    <div class="date-today">REGISTRO DE SERVIÇO</div>
+                </header>
+
+                <div class="ponto-container-box">
+                    <div class="card card-ponto-status">
+                        <div class="card-header-gray">📋 STATUS DO PLANTÃO</div>
+                        <div class="ponto-body">
+                            <div class="ponto-dados-usuario">
+                                <p><strong>Operacional:</strong> <span id="ponto-nome">Carregando...</span></p>
+                                <p><strong>ID do Jogo:</strong> <span id="ponto-id">Carregando...</span></p>
+                            </div>
+                            <div class="ponto-acoes">
+                                <div id="status-badge-ponto" class="status-badge fechado">FORA DE SERVIÇO</div>
+                                <div class="timer-display" id="ponto-timer">00:00:00</div>
+                                <div class="ponto-logs-horarios">
+                                    <p>🛫 <strong>Início:</strong> <span id="ponto-registro-inicio">--:--:--</span></p>
+                                    <p>🛬 <strong>Término:</strong> <span id="ponto-registro-fim">--:--:--</span></p>
+                                    <p>⏳ <strong>Total do Turno:</strong> <span id="ponto-registro-total">0h 0min</span></p>
+                                </div>
+                                <button id="btn-ponto-acao" onclick="alternarPonto()" class="btn-ponto iniciar">INICIAR SERVIÇO</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card card-historico-pontos" style="margin-top: 30px;">
+                        <div class="card-header-blue">📋 REGISTROS RECENTES DE PATRULHAMENTO (GERAL)</div>
+                        <div class="historico-feed" id="feed-publico-pontos">
+                            <p class="sem-registro" id="txt-sem-ponto">Nenhum turno finalizado recentemente.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== ABA 5: CENTRAL DE APREENSÕES ====== -->
+            <div id="content-apreensoes" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>SISTEMA DE APREENSÕES OPERACIONAIS</h1>
+                    <div class="date-today">LEITURA DE PRINT REAL</div>
+                </header>
+
+                <div class="ponto-container-box" style="max-width: 700px;">
+                    <div class="card">
+                        <div class="card-header-blue">📸 INSTANTÂNEO: SOLTE O PRINT DO INVENTÁRIO ABAIXO</div>
+                        <div class="ponto-body">
+                            <div class="upload-dropzone" id="dropzone" onclick="document.getElementById('file-print').click()">
+                                <span class="upload-icon">📷</span>
+                                <p>Clique aqui ou arraste o print do inventário do jogador</p>
+                                <input type="file" id="file-print" accept="image/*" style="display: none;" onchange="simularLeituraOCR(this)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== ABA 6: CENTRAL DE RELATÓRIOS (RSO / GUINCHO) ====== -->
+            <div id="content-relatorios" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>CENTRAL DE RELATÓRIOS OPERACIONAIS</h1>
+                    <div class="date-today">LAVRATURA DE ATIVIDADES</div>
+                </header>
+
+                <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                    <button id="btn-abrir-form-rso" class="btn-ponto iniciar" style="margin: 0; padding: 18px; font-size: 15px; letter-spacing: 1px; cursor: pointer;" onclick="exibirFormularioRSO()">📝 INICIAR REGISTRO DE RSO</button>
+                    <button id="btn-abrir-form-guincho" class="btn-ponto iniciar" style="margin: 0; padding: 18px; font-size: 15px; letter-spacing: 1px; background-color: #ffcc00; color: #121212; cursor: pointer;" onclick="exibirFormularioGuincho()">🚛 INICIAR REGISTRO DE GUINCHO</button>
+                </div>
+
+                <!-- FORMULÁRIO DO RSO -->
+                <section id="caixa-formulario-rso" class="card hidden" style="padding: 25px; margin-bottom: 30px; border: 1px solid #0052cc;">
+                    <div class="card-header-gray" style="margin: -25px -25px 20px -25px; padding: 15px 20px; background: linear-gradient(90deg, #0052cc, #003d99);">📝 PREENCHIMENTO: RELATÓRIO DE SERVIÇO OPERACIONAL (RSO)</div>
+                    <form id="form-registro-operacional" onsubmit="publicarRelatorioRSO(event)" class="auth-form" style="max-width: 100%; display: flex; flex-direction: column; gap: 15px;">
+                        <div class="input-row-3">
+                            <div class="input-group"><label>Batalhão</label><input type="text" id="rel-batalhao" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                            <div class="input-group"><label>Prefixo da Viatura</label><input type="text" id="rel-prefixo" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                            <div class="input-group"><label>Data do Serviço</label><input type="date" id="rel-data" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                        </div>
+                        <div class="input-row-2">
+                            <div class="input-group"><label>Horário de Início</label><input type="time" id="rel-hora-inicio" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                            <div class="input-group"><label>Horário de Término</label><input type="time" id="rel-hora-fim" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                        </div>
+                        <div class="form-section-title">👥 COMPOSIÇÃO DA GUARNIÇÃO</div>
+                        <div style="display: flex; flex-direction: column; gap: 12px; width:100%;">
+                            <input type="text" id="rel-h1" placeholder="1º Homem" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="text" id="rel-h2" placeholder="2º Homem" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="text" id="rel-h3" placeholder="3º Homem" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="text" id="rel-h4" placeholder="4º Homem" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="text" id="rel-h5" placeholder="5º Homem" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                        </div>
+                        <div class="form-section-title" style="color: #0052cc;">📜 HISTÓRICO</div>
+                        <textarea id="rel-historico" class="full-width-textarea" placeholder="Histórico..." required></textarea>
+                        <div class="input-row-2">
+                            <input type="number" id="rel-bopm" value="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
+                            <input type="number" id="rel-obitos" value="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
+                        </div>
+                        <input type="text" id="rel-materiais" placeholder="Materiais..." style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                        <div class="input-row-2" style="margin-top: 15px;"><button type="submit" class="btn-ponto iniciar">ENVIAR RSO</button><button type="button" class="btn-logout" onclick="cancelarRSO()">CANCELAR</button></div>
+                    </form>
+                </section>
+
+                <!-- FORMULÁRIO DO GUINCHO -->
+                <section id="caixa-formulario-guincho" class="card hidden" style="padding: 25px; margin-bottom: 30px; border: 1px solid #ffcc00;">
+                    <div class="card-header-gray" style="margin: -25px -25px 20px -25px; padding: 15px 20px; background: linear-gradient(90deg, #ffcc00, #b38f00); color: #121212;">🚛 PREENCHIMENTO: RELATÓRIO DE GUINCHO</div>
+                    <form id="form-registro-guincho" onsubmit="publicarRelatorioGuincho(event)" class="auth-form" style="max-width: 100%; display: flex; flex-direction: column; gap: 15px;">
+                        <div class="input-row-3">
+                            <input type="date" id="gui-data" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="time" id="gui-hora-inicio" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="time" id="gui-hora-fim" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                        </div>
+                        <div class="input-row-3">
+                            <input type="text" id="gui-veiculo" placeholder="Veículo" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="text" id="gui-placa" placeholder="Placa" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="text" id="gui-dono" placeholder="Proprietário" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                        </div>
+                        <div class="input-row-2">
+                            <input type="text" id="gui-retirada" placeholder="Retirada" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                            <input type="text" id="gui-destino" placeholder="Destino" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                        </div>
+                        <input type="text" id="gui-motivo" placeholder="Motivo" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                        <input type="text" id="gui-responsavel" placeholder="Responsável" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
+                        <div class="input-group" style="width: 100%;">
+                            <label>Anexar Foto do Veículo</label>
+                            <input type="file" id="gui-foto-arquivo" accept="image/*" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;" onchange="processarFotoVeiculo(this)">
+                            <img id="gui-preview-img" src="" class="hidden" style="max-height: 150px; margin-top: 10px; border-radius: 6px; border: 1px solid #ffcc00; display: block;">
+                            <input type="hidden" id="gui-foto-base64">
+                        </div>
+                        <div class="input-row-2" style="margin-top: 15px;"><button type="submit" class="btn-ponto iniciar" style="background-color:#ffcc00; color:#121212;">ENVIAR GUINCHO</button><button type="button" class="btn-logout" onclick="cancelarGuincho()">CANCELAR</button></div>
+                    </form>
+                </section>
+
+                <section class="card">
+                    <div class="card-header-blue">📋 HISTÓRICO GERAL DE RELATÓRIOS DO BATALHÃO</div>
+                    <div class="boletins-feed" id="feed-mural-relatorios" style="padding: 20px;">
+                        <p class="sem-registro">Nenhum relatório enviado até o momento.</p>
+                    </div>
+                </section>
+            </div>
+
+                        <!-- ====== ABA 3: MURAL DOS HERÓIS ====== -->
+            <div id="content-herois" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>MURAL DOS HERÓIS DO BATALHÃO</h1>
+                    <div class="date-today">HONRA E GLÓRIA</div>
+                </header>
+
+                <div class="mural-grid" id="mural-homenagens-batalhao"
+                     style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;">
+                </div>
+            </div>
+
+            <!-- ====== ABA 7: QUADRO DE AUSÊNCIAS JUSTIFICADAS ====== -->
+            <div id="content-ausencias" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>SISTEMA DE AUSÊNCIAS JUSTIFICADAS</h1>
+                    <div class="date-today">CONTROLE DE LICENÇAS</div>
+                </header>
+                
+                <div style="margin-bottom: 30px;">
+                    <button id="btn-abrir-form-ausencia" class="btn-ponto iniciar" style="margin: 0; padding: 18px; font-size: 15px; letter-spacing: 1px; cursor: pointer;" onclick="exibirFormularioAusencia()">📅 SOLICITAR LICENÇA / AFASTAMENTO</button>
+                </div>
+                
+                <section id="caixa-formulario-ausencia" class="card hidden" style="padding: 25px; margin-bottom: 30px; border: 1px solid #ff6b00;">
+                    <div class="card-header-gray" style="margin: -25px -25px 20px -25px; padding: 15px 20px; background: linear-gradient(90deg, #ff6b00, #cc4b00); color: white;">📅 FORMULÁRIO DE JUSTIFICATIVA</div>
+                    <form id="form-registro-ausencia" onsubmit="publicarAusenciaJustificada(event)" class="auth-form" style="max-width: 100%; display: flex; flex-direction: column; gap: 15px;">
+                        <div class="input-row-2">
+                            <div class="input-group"><label>ID do Jogo</label><input type="number" id="aus-id" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                            <div class="input-group"><label>Nome e Patente</label><input type="text" id="aus-nome" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                        </div>
+                        <div class="input-row-2">
+                            <div class="input-group"><label>Início</label><input type="date" id="aus-data-inicio" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                            <div class="input-group"><label>Término</label><input type="date" id="aus-data-fim" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                        </div>
+                        <div class="input-group" style="width: 100%;"><label>Motivo</label><textarea id="aus-motivo" class="full-width-textarea" required></textarea></div>
+                        <div class="input-row-2" style="margin-top: 25px; gap: 20px;">
+                            <button type="submit" class="btn-ponto iniciar" style="margin: 0; padding:15px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:15px; background-color:#ff6b00; color:white;">ENVIAR JUSTIFICATIVA</button>
+                            <button type="button" class="btn-logout" style="margin: 0; padding:15px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:15px;" onclick="cancelarAusencia()">CANCELAR RASCUNHO</button>
+                        </div>
+                    </form>
+                </section>
+                
+                <section class="card">
+                    <div class="card-header-blue" style="background: #2c2c2e; color: white;">📋 HISTÓRICO DE AUSÊNCIAS E LICENÇAS DO EFETIVO</div>
+                    <div class="boletins-feed" id="feed-mural-ausencias" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+                        <p class="sem-registro" id="txt-sem-ausencia">Nenhuma ausência registrada no momento.</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ====== MURAL DA HISTÓRIA DO BATALHÃO ====== -->
+            <div id="content-historia" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>📜 HISTÓRIA DO BATALHÃO</h1>
+                    <div class="date-today">MEMÓRIA INSTITUCIONAL</div>
+                </header>
+                <section class="card">
+                    <div class="card-header-gold">🏛️ NOSSA HISTÓRIA</div>
+                    <div id="mural-historia-bpe" class="history-card" style="margin:20px;">A história do batalhão ainda não foi publicada pelo Coronel.</div>
+                </section>
+            </div>
+
+            <!-- ====== NECROTÉRIO / MEMORIAL ====== -->
+            <div id="content-necroteca" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>✝️ NECROTÉRIO / MEMORIAL DO BATALHÃO</h1>
+                    <div class="date-today">MEMÓRIA DOS QUE DEIXARAM O EFETIVO</div>
+                </header>
+                <section class="card">
+                    <div class="card-header-gray">🕯️ MEMORIAL DO EFETIVO</div>
+                    <div id="mural-necroteca" style="padding:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:15px;"></div>
+                </section>
+            </div>
+
+            <!-- ====== ABA 8: QUADRO DE HIERARQUIA DINÂMICA WITH CONTADORES ====== -->
+            <div id="content-hierarquia" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>QUADRO DE HIERARQUIA GERAL DO EFETIVO</h1>
+                    <div class="date-today" style="color: #ffcc00; font-weight: bold; font-size: 14px; background: rgba(255,204,0,0.1); padding: 6px 12px; border-radius: 4px; display: inline-block;">
+                        🚨 TOTAL DE POLICIAIS NO BATALHÃO: <span id="contador-efetivo-total" style="color: #ffffff; font-weight: 800;">0</span>
+                    </div>
+                </header>
+
+                <div class="mural-grid" style="display: flex; flex-direction: column; gap: 30px; max-width: 100%; margin-top: 20px;">
+                    <section class="card" style="border-left: 5px solid #ffcc00;">
+                        <div class="card-header-gold">👑 ALTO COMANDO (<span id="qtd-alto-comando">0</span>)</div>
+                        <div id="hierarquia-alto-comando" style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px;"></div>
+                    </section>
+
+                    <section class="card" style="border-left: 5px solid #0052cc;">
+                        <div class="card-header-blue">🎖️ CORPO DE OFICIAIS (<span id="qtd-oficiais">0</span>)</div>
+                        <div id="hierarquia-oficiais" style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px;"></div>
+                    </section>
+
+                    <section class="card" style="border-left: 5px solid #00e676;">
+                        <div class="card-header-blue" style="background: linear-gradient(90deg, #00e676, #00b34a); color: #121212; font-weight: bold;">🛡️ CORPO DE GRADUADOS (<span id="qtd-graduados">0</span>)</div>
+                        <div id="hierarquia-graduados" style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px;"></div>
+                    </section>
+
+                    <section class="card" style="border-left: 5px solid #aeaea3;">
+                        <div class="card-header-gray">👮‍♂️ CORPO DE PRAÇAS (<span id="qtd-pracas">0</span>)</div>
+                        <div id="hierarquia-pracas" style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px;"></div>
+                    </section>
+                </div>
+            </div>
+
+
+            <!-- ====== ABA 9: PAINEL ADMINISTRATIVO SUPREMO ====== -->
+            <div id="content-coronel" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1 id="titulo-painel-coronel">PAINEL DE CONTROLE DO ALTO COMANDO</h1>
+                    <div class="date-today" style="color:#ffcc00;">GESTÃO E AUDITORIA SUPREMA</div>
+                </header>
+
+                <div class="mural-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
+                    <section class="card" style="border:1px solid #ffcc00;">
+                        <div class="card-header-gold">🎖️ CONFIGURAR POLICIAL DESTAQUE DA SEMANA</div>
+                        <form id="form-admin-destaque" onsubmit="salvarPolicialDestaque(event)" style="padding:20px; display:flex; flex-direction:column; gap:15px;">
+                            <div class="input-group">
+                                <label>Nome e Patente do Homenageado</label>
+                                <input type="text" id="adm-destaque-nome" placeholder="Ex: SARGENTO PM HYUN HEE KIM" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Texto de Homenagem / Justificativa do Comando</label>
+                                <textarea id="adm-destaque-texto" class="full-width-textarea" style="min-height:100px;" placeholder="Escreva o motivo..." required></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>Anexar Foto de Perfil</label>
+                                <input type="file" id="adm-destaque-foto-arquivo" accept="image/*" onchange="processarFotoDestaque(this)">
+                                <img id="adm-destaque-preview" src="" class="hidden" style="max-height:120px; margin-top:10px; border-radius:6px; border:1px solid #ffcc00;">
+                                <input type="hidden" id="adm-destaque-base64">
+                            </div>
+                            <button type="submit" class="btn-ponto iniciar" style="background:#ffcc00; color:#121212; margin:0;">🏆 FIXAR DESTAQUE DA SEMANA</button>
+                        </form>
+                    </section>
+
+                    <section class="card" style="border:1px solid #0052cc;">
+                        <div class="card-header-blue">📢 PUBLICAR AVISOS E BOLETINS OFICIAIS</div>
+                        <form id="form-admin-boletim" onsubmit="publicarBoletimOficial(event)" style="padding:20px; display:flex; flex-direction:column; gap:15px;">
+                            <div class="input-group">
+                                <label>Título do Comunicado Interno</label>
+                                <input type="text" id="adm-boletim-titulo" placeholder="Título do comunicado" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Texto do Comunicado</label>
+                                <textarea id="adm-boletim-texto" class="full-width-textarea" style="min-height:100px;" placeholder="Escreva o comunicado..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn-ponto iniciar" style="margin:0;">📢 PUBLICAR COMUNICADO</button>
+                        </form>
+                    </section>
+                </div>
+
+                <section class="card" style="margin-top:30px;border:1px solid #d6ad00;">
+                    <div class="card-header-gold">🏅 GERENCIAR MURAL DOS HERÓIS</div>
+                    <form onsubmit="adicionarHeroiMural(event)" style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+                        <div class="input-row-2">
+                            <div class="input-group">
+                                <label>Nome e Patente</label>
+                                <input id="adm-heroi-nome" type="text" placeholder="Ex: TENENTE CORONEL PM CHACAL" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Cargo / Identificação</label>
+                                <input id="adm-heroi-cargo" type="text" placeholder="Ex: ATUAL COMANDANTE DO BATALHÃO" required>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label>Homenagem</label>
+                            <textarea id="adm-heroi-texto" class="full-width-textarea" style="min-height:120px;" placeholder="Escreva a homenagem..." required></textarea>
+                        </div>
+                        <div class="input-row-2">
+                            <div class="input-group">
+                                <label>Ícone</label>
+                                <input id="adm-heroi-icone" type="text" value="🎖️" maxlength="4" placeholder="🎖️">
+                            </div>
+                            <button type="submit" class="btn-ponto iniciar" style="margin:0;background:#d6ad00;color:#121212;">🏅 ADICIONAR AO MURAL</button>
+                        </div>
+                    </form>
+                    <div id="lista-admin-herois" style="padding:0 20px 20px;"></div>
+                </section>
+
+                <div class="mural-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:30px;">
+                    <section class="card" style="border:1px solid #666;">
+                        <div class="card-header-gray">✝️ NECROTÉRIO / MEMORIAL</div>
+                        <form onsubmit="publicarNecroteca(event)" style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+                            <input id="adm-necro-nome" type="text" placeholder="Nome e patente do policial" required>
+                            <textarea id="adm-necro-texto" class="full-width-textarea" style="min-height:110px;" placeholder="Mensagem / homenagem / motivo da saída..." required></textarea>
+                            <button class="btn-ponto iniciar" type="submit" style="margin:0;background:#555;">✝️ REGISTRAR NO MEMORIAL</button>
+                        </form>
+                    </section>
+                    <section class="card" style="border:1px solid #ffcc00;">
+                        <div class="card-header-gold">📜 HISTÓRIA DO BATALHÃO</div>
+                        <form onsubmit="salvarHistoriaBPE(event)" style="padding:20px;display:flex;flex-direction:column;gap:12px;">
+                            <textarea id="adm-historia-texto" class="full-width-textarea" style="min-height:180px;" placeholder="Escreva a história oficial do batalhão..." required></textarea>
+                            <button class="btn-ponto iniciar" type="submit" style="margin:0;background:#ffcc00;color:#121212;">💾 PUBLICAR / ATUALIZAR HISTÓRIA</button>
+                        </form>
+                    </section>
+                </div>
+
+                <section class="card" style="margin-top:30px;border:1px solid #00e676;">
+                    <div class="card-header-blue" style="background:linear-gradient(90deg,#005c32,#00a95c);">🔐 SOLICITAÇÕES DE ACESSO PENDENTES</div>
+                    <div id="lista-solicitacoes-acesso" style="padding:20px;"></div>
+                </section>
+
+                <section class="card" style="margin-top:30px;border:1px solid #ff1744;">
+                    <div class="card-header-gray">🧹 LIMPEZA DE REGISTROS — APAGAR TUDO</div>
+                    <div id="painel-apagar-tudo" style="padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;"></div>
+                </section>
+
+                <section class="card" style="margin-top:30px;border:1px solid #ff1744;">
+                    <div class="card-header-gray">🔐 REGISTRO DE AUDITORIA</div>
+                    <div class="tabela-scroll">
+                        <table class="tabela-tatico">
+                            <thead><tr><th>Data/Hora</th><th>Evento</th></tr></thead>
+                            <tbody id="tabela-logs-auditoria-coronel">
+                                <tr><td colspan="2" class="sem-registro">Nenhum log registrado.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- POP-UP DE GESTÃO DO POLICIAL -->
+            <div id="popup-gestao-militar" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,.78); display:none; align-items:center; justify-content:center; z-index:999999;">
+                <div class="card" style="width:min(430px,92vw); padding:24px; border:2px solid #ffcc00; box-shadow:0 15px 50px rgba(0,0,0,.65);">
+                    <div style="text-align:center; margin-bottom:20px;">
+                        <div style="font-size:30px;">🎖️</div>
+                        <h3 id="gestao-pm-nome" style="color:#fff; margin:6px 0 0;">NOME DO POLICIAL</h3>
+                        <p id="gestao-pm-id" style="color:#8e8e93; font-size:12px; margin:5px 0;">ID DO JOGO: 0000</p>
+                        <p id="gestao-pm-patente" style="color:#ffcc00; font-weight:bold; font-size:12px; margin:5px 0;">PATENTE: --</p>
+                        <span id="gestao-pm-estagio" class="hidden" style="display:inline-block; color:#ffcc00; font-size:11px; font-weight:bold; background:rgba(255,204,0,.10); padding:3px 9px; border-radius:4px;">ESTÁGIO</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <button onclick="dispararAcaoPromocao('promover')" style="background:#0052cc; color:white; border:0; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">⬆️ PROMOVER</button>
+                        <button onclick="dispararAcaoPromocao('rebaixar')" style="background:#3a3a3c; color:white; border:0; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">⬇️ REBAIXAR</button>
+                        <button onclick="dispararAcaoPromocao('estagio')" style="background:#ffcc00; color:#121212; border:0; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">🟡 COLOCAR EM ESTÁGIO</button>
+                        <button onclick="dispararAcaoPromocao('remover-estagio')" style="background:#545456; color:white; border:0; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">⚪ REMOVER ESTÁGIO</button>
+                        <button onclick="dispararAcaoPromocao('exonerar')" style="background:#ff1744; color:white; border:0; padding:12px; border-radius:6px; font-weight:bold; cursor:pointer;">🚫 EXONERAR</button>
+                        <button onclick="fecharMenuGestaoMilitar()" style="background:transparent; color:#8e8e93; border:1px solid #3a3a3c; padding:10px; border-radius:6px; font-weight:bold; cursor:pointer; margin-top:4px;">FECHAR</button>
+                    </div>
+                </div>
+            </div>
+
+            <style>
+                #popup-gestao-militar:not(.hidden) { display:flex !important; }
+                #content-coronel input, #content-coronel textarea { width:100%; box-sizing:border-box; padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; }
+                #content-coronel label { display:block; margin-bottom:6px; color:#aeaea3; font-size:13px; }
+                #hierarquia-alto-comando > div, #hierarquia-oficiais > div, #hierarquia-graduados > div, #hierarquia-pracas > div { transition:transform .12s, border-color .12s, box-shadow .12s; }
+                #hierarquia-alto-comando > div:hover, #hierarquia-oficiais > div:hover, #hierarquia-graduados > div:hover, #hierarquia-pracas > div:hover { transform:translateY(-2px); border-color:#ffcc00 !important; box-shadow:0 6px 18px rgba(0,0,0,.25) !important; }
+            </style>
+
+
+            <!-- CARREGAMENTO DO ROBÔ OCR -->
+            <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+        
+    <!-- Banco compartilhado BPE Tático — Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const BPE_SUPABASE_URL = "https://eplpkbsdpqkqdjhdrxph.supabase.co";
+        const BPE_SUPABASE_KEY = "sb_publishable_2czuKM0vH23EdhH5_lC7Lg_q2KUbFal";
+        const bpeSupabase = window.supabase.createClient(BPE_SUPABASE_URL, BPE_SUPABASE_KEY);
+        const BPE_SHARED_KEYS = [
+            'usuariosBPE', 'bancoUsuariosBPE', 'historicoPontosBPE', 'rankingApreensoesBPE',
+            'topMateriaisBPE', 'bancoRelatoriosBPE', 'bancoLogsDelecaoBPE', 'bancoAusenciasBPE',
+            'bancoBoletinsBPE', 'bancoSolicitacoesAcessoBPE', 'bancoNecrotecaBPE',
+            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bpePolicialDestaque', 'historiaBPE'
+        ];
+        let bpeBancoPronto = false;
+        let bpeSincronizando = null;
+
+        async function bpeSalvarNuvem(chave, valor) {
+            try {
+                const { error } = await bpeSupabase.from('bpe_store').upsert({
+                    chave,
+                    valor,
+                    atualizado_em: new Date().toISOString()
+                }, { onConflict: 'chave' });
+                if (error) console.error('[BPE] Erro ao salvar', chave, error);
+            } catch (e) {
+                console.error('[BPE] Falha de conexão ao salvar', chave, e);
+            }
+        }
+
+        async function sincronizarBancoBPE(opcoes = {}) {
+            if (bpeSincronizando) return bpeSincronizando;
+            bpeSincronizando = (async () => {
+                try {
+                    const { data, error } = await bpeSupabase.from('bpe_store').select('chave,valor,atualizado_em');
+                    if (error) throw error;
+
+                    const linhas = Array.isArray(data) ? data : [];
+                    const mapa = new Map(linhas.map(x => [x.chave, x]));
+
+                    // Primeira conexão: se o banco estiver vazio, migra o conteúdo local existente.
+                    if (linhas.length === 0) {
+                        for (const chave of BPE_SHARED_KEYS) {
+                            const raw = localStorage.getItem(chave);
+                            if (raw !== null) {
+                                try {
+                                    const valor = JSON.parse(raw);
+                                    await bpeSalvarNuvem(chave, valor);
+                                } catch (_) {}
+                            }
+                        }
+                    } else {
+                        // Banco é a fonte oficial. O cache local acompanha o Supabase.
+                        // Se uma chave ainda não existir na nuvem, preservamos o dado local
+                        // e fazemos a primeira subida dessa chave para o banco compartilhado.
+                        for (const chave of BPE_SHARED_KEYS) {
+                            if (mapa.has(chave)) {
+                                localStorage.setItem(chave, JSON.stringify(mapa.get(chave).valor));
+                            } else {
+                                const raw = localStorage.getItem(chave);
+                                if (raw !== null) {
+                                    try { await bpeSalvarNuvem(chave, JSON.parse(raw)); } catch (_) {}
+                                }
+                            }
+                        }
+                    }
+
+                    bpeBancoPronto = true;
+                    return true;
+                } catch (e) {
+                    console.error('[BPE] Não foi possível sincronizar com o Supabase.', e);
+                    bpeBancoPronto = false;
+                    return false;
+                } finally {
+                    bpeSincronizando = null;
+                }
+            })();
+            return bpeSincronizando;
+        }
+
+        async function bpeForcarSincronizacao() {
+            return sincronizarBancoBPE({ force: true });
+        }
+
+        // Atualização periódica: outros usuários passam a aparecer sem precisar fechar o site.
+        setInterval(async () => {
+            if (document.visibilityState === 'visible') {
+                const ok = await sincronizarBancoBPE({ force: true });
+                if (ok && typeof atualizarTabelasGerais === 'function') {
+                    try {
+                        if (typeof renderizarHierarquiaGeral === 'function') renderizarHierarquiaGeral();
+                        if (typeof renderizarBoletinsECommunicados === 'function') renderizarBoletinsECommunicados();
+                        if (typeof renderizarMuralHerois === 'function') renderizarMuralHerois();
+                        if (typeof renderizarMuralRSO === 'function') renderizarMuralRSO();
+                        if (typeof renderizarMuralAusencias === 'function') renderizarMuralAusencias();
+                        if (typeof renderizarNecroteca === 'function') renderizarNecroteca();
+                        if (typeof renderizarHistoriaBPE === 'function') renderizarHistoriaBPE();
+                        atualizarTabelasGerais();
+                    } catch (_) {}
+                }
+            }
+        }, 15000);
+    </script>
+    <script>
+                let timerIntervalo;
+                let segundosAtivos = 0;
+                let pontoAberto = false;
+                let idPolicialSelecionadoGeral = null;
+
+                const PATENTES = [
+                    { nome: "SOLDADO 2ª CLASSE", grupo: "pracas" },
+                    { nome: "SOLDADO 1ª CLASSE", grupo: "pracas" },
+                    { nome: "CABO", grupo: "pracas" },
+                    { nome: "3º SARGENTO", grupo: "graduados" },
+                    { nome: "2º SARGENTO", grupo: "graduados" },
+                    { nome: "1º SARGENTO", grupo: "graduados" },
+                    { nome: "SUB-TENENTE", grupo: "graduados" },
+                    { nome: "ASPIRANTE OFICIAL", grupo: "oficiais" },
+                    { nome: "2º TENENTE", grupo: "oficiais" },
+                    { nome: "1º TENENTE", grupo: "oficiais" },
+                    { nome: "CAPITÃO", grupo: "oficiais" },
+                    { nome: "MAJOR", grupo: "alto-comando" },
+                    { nome: "TENENTE CORONEL", grupo: "alto-comando" },
+                    { nome: "CORONEL", grupo: "alto-comando" },
+                    { nome: "COMANDO GERAL", grupo: "alto-comando" },
+                    { nome: "SUB COMANDO GERAL", grupo: "alto-comando" }
+                ];
+
+                const CHAVES_PATENTE = [
+                    [/soldado\s*(2|segunda)\s*(classe|cl)/i, "SOLDADO 2ª CLASSE"],
+                    [/soldado\s*(1|primeira)\s*(classe|cl)/i, "SOLDADO 1ª CLASSE"],
+                    [/^soldado$/i, "SOLDADO 2ª CLASSE"],
+                    [/cabo/i, "CABO"],
+                    [/3\s*[º°o]?\s*sargento|terceiro\s*sargento/i, "3º SARGENTO"],
+                    [/2\s*[º°o]?\s*sargento|segundo\s*sargento/i, "2º SARGENTO"],
+                    [/1\s*[º°o]?\s*sargento|primeiro\s*sargento/i, "1º SARGENTO"],
+                    [/sub[-\s]?tenente/i, "SUB-TENENTE"],
+                    [/aspirante(\s+oficial)?/i, "ASPIRANTE OFICIAL"],
+                    [/2\s*[º°o]?\s*tenente|segundo\s*tenente/i, "2º TENENTE"],
+                    [/1\s*[º°o]?\s*tenente|primeiro\s*tenente/i, "1º TENENTE"],
+                    [/capit[aã]o/i, "CAPITÃO"],
+                    [/major/i, "MAJOR"],
+                    [/tenente[-\s]?coronel/i, "TENENTE CORONEL"],
+                    [/coronel/i, "CORONEL"],
+                    [/sub[-\s]?comando\s+geral/i, "SUB COMANDO GERAL"],
+                    [/comando\s+geral/i, "COMANDO GERAL"]
+                ];
+
+                function lerJSON(chave, fallback) {
+                    try { return JSON.parse(localStorage.getItem(chave)) ?? fallback; }
+                    catch(e) { return fallback; }
+                }
+
+                function salvarJSON(chave, valor) {
+                    localStorage.setItem(chave, JSON.stringify(valor));
+                    if (Array.isArray(BPE_SHARED_KEYS) && BPE_SHARED_KEYS.includes(chave)) {
+                        // Aguarda a sincronização inicial para não sobrescrever o banco com defaults vazios.
+                        (async () => {
+                            try {
+                                while (!bpeBancoPronto && bpeSincronizando) await bpeSincronizando;
+                                if (bpeBancoPronto) await bpeSalvarNuvem(chave, valor);
+                            } catch (e) { console.error('[BPE] erro ao sincronizar alteração', chave, e); }
+                        })();
+                    }
+                }
+
+                if (!localStorage.getItem('historicoPontosBPE')) salvarJSON('historicoPontosBPE', []);
+                if (!localStorage.getItem('rankingApreensoesBPE')) salvarJSON('rankingApreensoesBPE', {});
+                if (!localStorage.getItem('topMateriaisBPE')) salvarJSON('topMateriaisBPE', {});
+                if (!localStorage.getItem('bancoRelatoriosBPE')) salvarJSON('bancoRelatoriosBPE', []);
+                if (!localStorage.getItem('bancoLogsDelecaoBPE')) salvarJSON('bancoLogsDelecaoBPE', []);
+                if (!localStorage.getItem('bancoAusenciasBPE')) salvarJSON('bancoAusenciasBPE', []);
+                if (!localStorage.getItem('bancoUsuariosBPE')) salvarJSON('bancoUsuariosBPE', []);
+                if (!localStorage.getItem('bancoBoletinsBPE')) salvarJSON('bancoBoletinsBPE', []);
+                if (!localStorage.getItem('bancoSolicitacoesAcessoBPE')) salvarJSON('bancoSolicitacoesAcessoBPE', []);
+                if (!localStorage.getItem('bancoNecrotecaBPE')) salvarJSON('bancoNecrotecaBPE', []);
+                if (!localStorage.getItem('bancoExoneradosBPE')) salvarJSON('bancoExoneradosBPE', []);
+                if (!localStorage.getItem('bancoHeroisBPE')) {
+                    salvarJSON('bancoHeroisBPE', [
+                        {
+                            id: 'heroi-chacal',
+                            nome: 'TENENTE CORONEL PM CHACAL',
+                            cargo: 'ATUAL COMANDANTE DO BATALHÃO',
+                            texto: 'Ao Tenente Coronel PM Chacal, nosso reconhecimento pela liderança, dedicação e compromisso à frente do batalhão. Sua atuação representa autoridade, responsabilidade e respeito à tropa, contribuindo para a continuidade e o fortalecimento da unidade.',
+                            icone: '🛡️',
+                            destaque: 'gold'
+                        },
+                        {
+                            id: 'heroi-kayque',
+                            nome: 'EX MAJOR PM KAYQUE',
+                            cargo: 'EX SUB COMANDO DO BATALHÃO',
+                            texto: 'Ao Ex Major PM Kayque, nosso reconhecimento pelos serviços prestados durante sua passagem pelo Sub Comando do batalhão. Sua trajetória, dedicação e contribuição à unidade permanecem registradas como parte importante da história e da memória institucional do Batalhão.',
+                            icone: '🎖️',
+                            destaque: 'blue'
+                        }
+                    ]);
+                }
+                 if (!localStorage.getItem('bpePolicialDestaque')) salvarJSON('bpePolicialDestaque', null);
+
+                function normalizarTexto(valor) {
+                    return String(valor || "")
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .toLowerCase()
+                        .replace(/[-_]/g, " ")
+                        .replace(/\s+/g, " ")
+                        .trim();
+                }
+
+                // Lê SOMENTE o trecho antes do "PM". O restante é o nome do policial.
+                function normalizarPatenteCanonica(valor) {
+                    const bruto = String(valor || "").trim();
+                    if (!bruto) return null;
+                    const normalizado = normalizarTexto(bruto);
+
+                    // Primeiro tenta uma correspondência exata com a lista oficial.
+                    const exata = PATENTES.find(p => normalizarTexto(p.nome) === normalizado);
+                    if (exata) return exata.nome;
+
+                    // Aceita variações comuns digitadas no RP/banco de dados.
+                    const aliases = [
+                        [/^soldado(?:\s+2(?:a|ª|º)?|\s+segunda)?(?:\s+classe)?$/i, "SOLDADO 2ª CLASSE"],
+                        [/^soldado(?:\s+1(?:a|ª|º)?|\s+primeira)(?:\s+classe)?$/i, "SOLDADO 1ª CLASSE"],
+                        [/^cabo$/i, "CABO"],
+                        [/^(?:3|terceiro)\s*[º°o]?\s*sargento$/i, "3º SARGENTO"],
+                        [/^(?:2|segundo)\s*[º°o]?\s*sargento$/i, "2º SARGENTO"],
+                        [/^(?:1|primeiro)\s*[º°o]?\s*sargento$/i, "1º SARGENTO"],
+                        [/^sub[-\s]?tenente$/i, "SUB-TENENTE"],
+                        [/^aspirante(?:\s+oficial)?$/i, "ASPIRANTE OFICIAL"],
+                        [/^(?:2|segundo)\s*[º°o]?\s*tenente$/i, "2º TENENTE"],
+                        [/^(?:1|primeiro)\s*[º°o]?\s*tenente$/i, "1º TENENTE"],
+                        [/^capit[aã]o$/i, "CAPITÃO"],
+                        [/^major$/i, "MAJOR"],
+                        [/^tenente[-\s]?coronel$/i, "TENENTE CORONEL"],
+                        [/^coronel$/i, "CORONEL"],
+                        [/^sub[-\s]?comando\s+geral$/i, "SUB COMANDO GERAL"],
+                        [/^comando\s+geral$/i, "COMANDO GERAL"]
+                    ];
+                    const alias = aliases.find(([regex]) => regex.test(bruto));
+                    return alias ? alias[1] : null;
+                }
+
+                function extrairPatenteDoNome(nomeCompleto) {
+                    const nome = String(nomeCompleto || "").trim();
+                    const antesDoPM = nome.match(/^(.+?)\s+PM\b/i);
+                    const trechoPatente = antesDoPM ? antesDoPM[1].trim() : nome.split(/\s+PM\b/i)[0].trim();
+                    if (!trechoPatente) return null;
+
+                    const canonica = normalizarPatenteCanonica(trechoPatente);
+                    if (canonica) return canonica;
+
+                    for (const [regex, patente] of CHAVES_PATENTE) {
+                        if (regex.test(trechoPatente)) return patente;
+                    }
+                    return null;
+                }
+
+                function separarNomePatente(nomeCompleto, patenteSalva) {
+                    const nome = String(nomeCompleto || "").trim();
+                    const patente = normalizarPatenteCanonica(patenteSalva) || extrairPatenteDoNome(nomeCompleto) || "SOLDADO 2ª CLASSE";
+                    const match = nome.match(/^(.+?)\s+PM\b\s*(.*)$/i);
+                    const nomeDepoisDoPM = match ? match[2].trim() : "";
+                    return { patente, nomeDepoisDoPM: nomeDepoisDoPM || nome };
+                }
+
+                function obterGrupoPatente(patente) {
+                    const p = normalizarTexto(patente);
+                    const item = PATENTES.find(x => normalizarTexto(x.nome) === p);
+                    if (item) return item.grupo;
+
+                    if (p.includes("comando geral") || p.includes("sub comando geral") || p === "coronel" || p === "tenente coronel" || p === "major") return "alto-comando";
+                    if (p.includes("capitao") || p.includes("tenente") || p.includes("aspirante")) return "oficiais";
+                    if (p.includes("sargento") || p.includes("sub tenente")) return "graduados";
+                    return "pracas";
+                }
+
+                function obterPatenteDoPolicial(pm) {
+                    const patenteSalva = normalizarPatenteCanonica(pm?.patente);
+                    const patenteCargo = normalizarPatenteCanonica(pm?.cargo);
+                    const patenteNome = extrairPatenteDoNome(pm?.usuario || pm?.nome || "");
+                    // Se houver um valor antigo/inválido salvo no banco, ele não pode travar a promoção.
+                    return patenteSalva || patenteCargo || patenteNome || "SOLDADO 2ª CLASSE";
+                }
+
+                function montarNomeComPatente(pm, novaPatente) {
+                    const nomeAtual = String(pm.usuario || pm.nome || "POLICIAL").trim();
+                    const match = nomeAtual.match(/^.+?\s+PM\b\s*(.*)$/i);
+                    let nomeDepoisDoPM = match ? match[1].trim() : nomeAtual;
+                    if (!match) {
+                        const patenteAtual = obterPatenteDoPolicial(pm);
+                        const prefixo = new RegExp('^' + patenteAtual.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i');
+                        nomeDepoisDoPM = nomeDepoisDoPM.replace(prefixo, '').replace(/^PM\s+/i, '').trim();
+                    }
+                    return `${normalizarPatenteCanonica(novaPatente) || novaPatente} PM ${nomeDepoisDoPM}`.trim();
+                }
+
+                function obterUsuarioAtualBanco() {
+                    const lista = lerJSON('bancoUsuariosBPE', []);
+                    const id = String(localStorage.getItem('idLogado') || '');
+                    const usuario = normalizarTexto(localStorage.getItem('usuarioLogado') || '');
+                    return lista.find(x => String(x.id) === id || normalizarTexto(x.usuario || x.nome) === usuario) || null;
+                }
+
+                function usuarioEhAltoComando() {
+                    if (localStorage.getItem('acessoSupremo') === 'true') return true;
+
+                    // Alguns logins guardam a função como "Alto Comando",
+                    // "Comando Geral" ou "Sub Comando Geral" em cargoUsuario.
+                    // Esses cargos também devem abrir o painel administrativo.
+                    const cargo = normalizarTexto(localStorage.getItem('cargoUsuario') || '');
+                    if (
+                        cargo.includes('alto comando') ||
+                        cargo.includes('comando geral') ||
+                        cargo.includes('sub comando geral') ||
+                        cargo === 'coronel' ||
+                        cargo === 'tenente coronel' ||
+                        cargo === 'major'
+                    ) return true;
+
+                    const pm = obterUsuarioAtualBanco();
+                    const patente = obterPatenteDoPolicial(
+                        pm || {
+                            usuario: localStorage.getItem('usuarioLogado') || '',
+                            patente: localStorage.getItem('cargoUsuario') || ''
+                        }
+                    );
+                    return obterGrupoPatente(patente) === 'alto-comando';
+                }
+
+                // O painel é do Alto Comando; não exige a flag antiga "acessoSupremo".
+                function podeGerenciarPainelAltoComando() {
+                    return usuarioEhAltoComando();
+                }
+
+                function usuarioTemAcessoSupremo() {
+                    const acesso = localStorage.getItem('acessoSupremo');
+                    return acesso === 'true';
+                }
+
+                function usuarioTemAcessoOperacional() {
+                    if (usuarioTemAcessoSupremo() || usuarioEhAltoComando()) return true;
+                    const pm = obterUsuarioAtualBanco();
+                    return !!(pm && (pm.aprovadoAcesso === true || pm.acessoLiberado === 'sim'));
+                }
+
+                function atualizarMenuAcesso() {
+                    const btn = document.getElementById('btn-menu-acesso');
+                    if (!btn) return;
+                    if (!usuarioTemAcessoOperacional()) btn.classList.remove('hidden');
+                    else btn.classList.add('hidden');
+                }
+
+                function aplicarBloqueioAcesso() {
+                    const liberado = usuarioTemAcessoOperacional();
+                    const btnAcesso = document.getElementById('btn-menu-acesso');
+                    document.querySelectorAll('.sidebar-menu .menu-btn').forEach(btn => {
+                        if (btn.id !== 'btn-menu-acesso' && btn.id !== 'btn-admin') btn.style.display = liberado ? '' : 'none';
+                    });
+                    const admin = document.getElementById('btn-admin');
+                    if (admin) admin.style.display = liberado && usuarioEhAltoComando() ? '' : 'none';
+                    if (!liberado) {
+                        document.querySelectorAll('.aba-conteudo').forEach(a => { a.classList.add('hidden'); });
+                        document.getElementById('content-acesso')?.classList.remove('hidden');
+                        const u = localStorage.getItem('usuarioLogado') || 'Policial';
+                        const id = localStorage.getItem('idLogado') || '0000';
+                        const box = document.getElementById('acesso-dados-usuario');
+                        if (box) box.innerHTML = `<strong>${String(u).toUpperCase()}</strong><br><span style="color:#8e8e93;">ID: ${id}</span>`;
+                        const req = lerJSON('bancoSolicitacoesAcessoBPE', []);
+                        const minha = req.find(r => String(r.id) === String(id) && r.status === 'pendente');
+                        document.getElementById('btn-solicitar-acesso')?.classList.toggle('hidden', !!minha);
+                        document.getElementById('acesso-pendente-box')?.classList.toggle('hidden', !minha);
+                    }
+                }
+
+                function solicitarAcessoSite() {
+                    const id = String(localStorage.getItem('idLogado') || '');
+                    const usuario = String(localStorage.getItem('usuarioLogado') || 'Policial');
+                    if (!id) { alert('Não foi possível identificar seu ID.'); return; }
+                    const banco = lerJSON('bancoSolicitacoesAcessoBPE', []);
+                    if (banco.some(r => String(r.id) === id && r.status === 'pendente')) { alert('Sua solicitação já está pendente.'); return; }
+                    banco.unshift({ id, usuario, cargo: localStorage.getItem('cargoUsuario') || '', data: new Date().toLocaleString('pt-BR'), status:'pendente' });
+                    salvarJSON('bancoSolicitacoesAcessoBPE', banco);
+                    registrarLogAuditoria(`Solicitação de acesso enviada por ${usuario} (ID ${id}).`);
+                    aplicarBloqueioAcesso();
+                    alert('📨 Solicitação enviada ao Alto Comando.');
+                }
+
+                function registrarLogAuditoria(mensagem) {
+                    const logs = lerJSON('bancoLogsDelecaoBPE', []);
+                    logs.unshift({
+                        dataHora: new Date().toLocaleString('pt-BR'),
+                        mensagem
+                    });
+                    salvarJSON('bancoLogsDelecaoBPE', logs);
+                }
+
+                document.addEventListener("DOMContentLoaded", async function() {
+                    await sincronizarBancoBPE();
+                    const usuario = localStorage.getItem('usuarioLogado') || 'Policial';
+                    const id = localStorage.getItem('idLogado') || '0000';
+                    document.getElementById('user-display').textContent = usuario;
+                    document.getElementById('ponto-nome').textContent = usuario;
+                    document.getElementById('ponto-id').textContent = id;
+                    atualizarMenuAcesso();
+                    aplicarBloqueioAcesso();
+                    if (usuarioTemAcessoOperacional()) {
+                        atualizarTagEstagioUsuario();
+                        atualizarTabelasGerais();
+                        renderizarMuralRSO();
+                        renderizarMuralAusencias();
+                        verificarStatusAusenciaUsuario();
+                        recuperarEstadoPonto();
+                        renderizarHierarquiaGeral();
+                        renderizarBoletinsECommunicados();
+                        renderizarMuralHerois();
+                        renderizarHistoriaBPE();
+                        renderizarNecroteca();
+                    }
+                    verificarAcessoPainelAdministrativoGeral();
+                    inserirBotoesApagarNosMenus();
+                });
+
+                function navegarAba(abaNome) {
+                    if (!usuarioTemAcessoOperacional() && abaNome !== 'acesso') {
+                        aplicarBloqueioAcesso();
+                        alert("🔒 Seu acesso ainda não foi liberado pelo Alto Comando.");
+                        return;
+                    }
+                    if (abaNome === 'coronel' && !usuarioEhAltoComando()) {
+                        alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");
+                        return;
+                    }
+
+                    document.querySelectorAll('.aba-conteudo').forEach(a => {
+                        a.classList.add('hidden');
+                        a.style.display = '';
+                    });
+                    document.querySelectorAll('.sidebar-menu .menu-btn').forEach(b => b.classList.remove('active'));
+
+                    const alvo = document.getElementById(`content-${abaNome}`);
+                    if (alvo) alvo.classList.remove('hidden');
+
+                    const btn = document.getElementById(`btn-menu-${abaNome}`);
+                    if (btn) btn.classList.add('active');
+
+                    if (abaNome === 'hierarquia') renderizarHierarquiaGeral();
+                    if (abaNome === 'coronel') {
+                        renderizarBoletinsECommunicados();
+                        renderizarSolicitacoesAcesso();
+                        renderizarPainelApagarTudo();
+                        renderizarMuralHerois();
+                        renderizarAdminHerois();
+                        requestAnimationFrame(() => {
+                            const principal = document.querySelector('.main-content');
+                            if (principal) principal.scrollTop = 0;
+                        });
+                    }
+                    if (abaNome === 'historia') renderizarHistoriaBPE();
+                    if (abaNome === 'necroteca') renderizarNecroteca();
+                }
+
+                function verificarAcessoPainelAdministrativoGeral() {
+                    const btnAdmin = document.getElementById('btn-admin');
+                    if (!btnAdmin) return;
+                    if (usuarioEhAltoComando()) {
+                        btnAdmin.classList.remove('hidden');
+                        btnAdmin.style.display = '';
+                        btnAdmin.textContent = usuarioTemAcessoSupremo() ? '👑 PAINEL DO CORONEL' : '🛡️ PAINEL DO ALTO COMANDO';
+                        btnAdmin.onclick = () => navegarAba('coronel');
+                    } else {
+                        btnAdmin.classList.add('hidden');
+                        btnAdmin.style.display = 'none';
+                    }
+                }
+
+                function atualizarTagEstagioUsuario() {
+                    const tag = document.getElementById('tag-estagio');
+                    if (!tag) return;
+                    const lista = lerJSON('bancoUsuariosBPE', []);
+                    const id = String(localStorage.getItem('idLogado') || '');
+                    const usuario = String(localStorage.getItem('usuarioLogado') || '');
+                    const pm = lista.find(x => String(x.id) === id || String(x.usuario || '').toLowerCase() === usuario.toLowerCase());
+                    if (pm?.situacaoEstagio === 'sim') tag.classList.remove('hidden');
+                    else tag.classList.add('hidden');
+                }
+
+                function abrirGestaoMilitarSeComando(idPolicial, nomePolicial) {
+                    if (!podeGerenciarPainelAltoComando()) {
+                        alert("🔒 Somente o Alto Comando pode gerenciar o efetivo.");
+                        return;
+                    }
+
+                    const lista = lerJSON('bancoUsuariosBPE', []);
+                    const pm = lista.find(x => String(x.id) === String(idPolicial));
+                    if (!pm) {
+                        alert("Policial não encontrado no banco de efetivo.");
+                        return;
+                    }
+
+                    idPolicialSelecionadoGeral = String(pm.id);
+                    document.getElementById('gestao-pm-nome').textContent = String(pm.usuario || pm.nome || nomePolicial).toUpperCase();
+                    document.getElementById('gestao-pm-id').textContent = `ID DO JOGO: ${pm.id}`;
+                    document.getElementById('gestao-pm-patente').textContent = `PATENTE: ${obterPatenteDoPolicial(pm)}`;
+
+                    const tagEstagio = document.getElementById('gestao-pm-estagio');
+                    if (pm.situacaoEstagio === 'sim') tagEstagio.classList.remove('hidden');
+                    else tagEstagio.classList.add('hidden');
+
+                    const popup = document.getElementById('popup-gestao-militar');
+                    popup?.classList.remove('hidden');
+                }
+
+                function fecharMenuGestaoMilitar() {
+                    const popup = document.getElementById('popup-gestao-militar');
+                    if (popup) popup.classList.add('hidden');
+                    idPolicialSelecionadoGeral = null;
+                }
+
+                function dispararAcaoPromocao(acao) {
+                    if (!podeGerenciarPainelAltoComando()) {
+                        fecharMenuGestaoMilitar();
+                        alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");
+                        return;
+                    }
+
+                    if (!idPolicialSelecionadoGeral) return;
+
+                    let lista = lerJSON('bancoUsuariosBPE', []);
+                    const indice = lista.findIndex(pm => String(pm.id) === String(idPolicialSelecionadoGeral));
+                    if (indice === -1) {
+                        alert("Policial não encontrado.");
+                        return;
+                    }
+
+                    const pm = lista[indice];
+                    const patenteAtual = obterPatenteDoPolicial(pm);
+                    const patenteCanonica = normalizarPatenteCanonica(patenteAtual) || "SOLDADO 2ª CLASSE";
+                    const posicaoAtual = PATENTES.findIndex(p => normalizarTexto(p.nome) === normalizarTexto(patenteCanonica));
+                    if (posicaoAtual < 0) {
+                        alert(`⚠️ Não foi possível identificar a patente atual de ${pm.usuario || pm.nome}. O sistema encontrou: ${patenteAtual}.`);
+                        return;
+                    }
+
+                    if (acao === 'promover') {
+                        if (posicaoAtual < 0 || posicaoAtual >= PATENTES.length - 1) {
+                            alert("⚠️ Este policial já está na patente máxima.");
+                            return;
+                        }
+                        const novaPatente = PATENTES[posicaoAtual + 1].nome;
+                        if (!confirm(`Promover ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
+                        pm.patente = novaPatente;
+                        pm.cargo = novaPatente;
+                        pm.usuario = montarNomeComPatente(pm, novaPatente);
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} promoveu ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
+                    }
+
+                    if (acao === 'rebaixar') {
+                        if (posicaoAtual <= 0) {
+                            alert("⚠️ Este policial já está na menor patente configurada.");
+                            return;
+                        }
+                        const novaPatente = PATENTES[posicaoAtual - 1].nome;
+                        if (!confirm(`Rebaixar ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
+                        pm.patente = novaPatente;
+                        pm.cargo = novaPatente;
+                        pm.usuario = montarNomeComPatente(pm, novaPatente);
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} rebaixou ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
+                    }
+
+                    if (acao === 'estagio') {
+                        if (pm.situacaoEstagio === 'sim') {
+                            alert("🟡 Este policial já está em estágio.");
+                            return;
+                        }
+                        pm.situacaoEstagio = 'sim';
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} colocou ${pm.usuario} (ID ${pm.id}) em ESTÁGIO.`);
+                    }
+
+                    if (acao === 'remover-estagio') {
+                        if (pm.situacaoEstagio !== 'sim') {
+                            alert("Este policial não está em estágio.");
+                            return;
+                        }
+                        pm.situacaoEstagio = 'nao';
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} removeu ${pm.usuario} (ID ${pm.id}) do ESTÁGIO.`);
+                    }
+
+                    if (acao === 'exonerar') {
+                        if (!confirm(`🚨 EXONERAÇÃO\n\nTem certeza que deseja exonerar ${pm.usuario || pm.nome} (ID ${pm.id})?\\n\\nO policial será removido do banco de efetivo deste navegador.`)) return;
+                        const exonerados = lerJSON('bancoExoneradosBPE', []);
+                        if (!exonerados.some(x => String(x.id) === String(pm.id))) exonerados.push({ id:String(pm.id), usuario:pm.usuario, data:new Date().toLocaleString('pt-BR'), exoneradoPor:localStorage.getItem('usuarioLogado')||'Alto Comando' });
+                        salvarJSON('bancoExoneradosBPE', exonerados);
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} EXONEROU ${pm.usuario} (ID ${pm.id}).`);
+                        lista.splice(indice, 1);
+                    }
+
+                    salvarJSON('bancoUsuariosBPE', lista);
+                    fecharMenuGestaoMilitar();
+                    atualizarTagEstagioUsuario();
+                    renderizarHierarquiaGeral();
+                    renderizarBoletinsECommunicados();
+                }
+
+                function renderizarHierarquiaGeral() {
+                    const listaPoliciais = lerJSON('bancoUsuariosBPE', []);
+                    const bancoAusencias = lerJSON('bancoAusenciasBPE', []);
+
+                    const secoes = {
+                        "alto-comando": document.getElementById('hierarquia-alto-comando'),
+                        "oficiais": document.getElementById('hierarquia-oficiais'),
+                        "graduados": document.getElementById('hierarquia-graduados'),
+                        "pracas": document.getElementById('hierarquia-pracas')
+                    };
+                    if (!secoes["pracas"]) return;
+
+                    Object.values(secoes).forEach(s => s.innerHTML = "");
+
+                    let contadores = { "alto-comando":0, oficiais:0, graduados:0, pracas:0 };
+                    const hoje = new Date();
+                    hoje.setHours(0,0,0,0);
+
+                    listaPoliciais.forEach(pm => {
+                        const patente = obterPatenteDoPolicial(pm);
+                        // Sincroniza o campo salvo sem destruir o restante do nome.
+                        pm.patente = patente;
+                        const grupo = obterGrupoPatente(patente);
+
+                        const idPolicial = String(pm.id || "0000");
+                        const nomeCompleto = String(pm.usuario || pm.nome || "POLICIAL").trim();
+
+                        const aus = bancoAusencias.find(a => {
+                            if (String(a.policialId) !== idPolicial) return false;
+                            const di = new Date(a.inicio + 'T00:00:00');
+                            const df = new Date(a.fim + 'T00:00:00');
+                            return hoje >= di && hoje <= df;
+                        });
+
+                        const card = document.createElement('div');
+                        card.style.cssText = "background:#1c1c1e;padding:15px;border-radius:6px;border:1px solid #2c2c2e;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.2);cursor:pointer;";
+                        card.dataset.id = idPolicial;
+                        card.title = podeGerenciarPainelAltoComando() ? "Clique para gerenciar este policial" : "Visualização do efetivo";
+
+                        const avatar = document.createElement('div');
+                        avatar.style.cssText = "font-size:24px;margin-bottom:5px;";
+                        avatar.textContent = "👮‍♂️";
+
+                        const strong = document.createElement('strong');
+                        strong.style.cssText = "color:#fff;font-size:14px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;";
+                        strong.textContent = nomeCompleto.toUpperCase();
+
+                        const spanId = document.createElement('span');
+                        spanId.style.cssText = "color:#8e8e93;font-size:11px;display:block;margin-top:4px;";
+                        spanId.textContent = `ID: ${idPolicial}`;
+
+                        card.appendChild(avatar);
+                        card.appendChild(strong);
+                        card.appendChild(spanId);
+
+                        if (pm.situacaoEstagio === "sim") {
+                            const est = document.createElement('span');
+                            est.textContent = "ESTÁGIO";
+                            est.style.cssText = "color:#ffcc00;font-size:11px;font-weight:bold;display:inline-block;margin-top:5px;background:rgba(255,204,0,.10);padding:2px 8px;border-radius:4px;";
+                            card.appendChild(est);
+                        }
+
+                        if (aus) {
+                            const afast = document.createElement('span');
+                            afast.textContent = "⚠️ AFASTADO";
+                            afast.style.cssText = "background:#ff1744;color:white;font-size:10px;font-weight:bold;padding:2px 6px;border-radius:4px;display:inline-block;margin-top:5px;";
+                            card.appendChild(afast);
+                            card.style.opacity = ".75";
+                            card.style.border = "1px dashed #ff1744";
+                        }
+
+                        if (usuarioEhAltoComando()) {
+                            card.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                abrirGestaoMilitarSeComando(idPolicial, nomeCompleto);
+                            });
+                        }
+
+                        secoes[grupo].appendChild(card);
+                        contadores[grupo]++;
+                    });
+
+                    salvarJSON('bancoUsuariosBPE', listaPoliciais);
+
+                    document.getElementById('contador-efetivo-total').textContent = listaPoliciais.length;
+                    document.getElementById('qtd-alto-comando').textContent = contadores["alto-comando"];
+                    document.getElementById('qtd-oficiais').textContent = contadores.oficiais;
+                    document.getElementById('qtd-graduados').textContent = contadores.graduados;
+                    document.getElementById('qtd-pracas').textContent = contadores.pracas;
+
+                    if (!secoes["alto-comando"].children.length) secoes["alto-comando"].innerHTML = '<p class="sem-registro" style="font-size:12px;color:#545456;">Nenhum integrante ativo.</p>';
+                    if (!secoes.oficiais.children.length) secoes.oficiais.innerHTML = '<p class="sem-registro" style="font-size:12px;color:#545456;">Nenhum Oficial ativo.</p>';
+                    if (!secoes.graduados.children.length) secoes.graduados.innerHTML = '<p class="sem-registro" style="font-size:12px;color:#545456;">Nenhum Graduado ativo.</p>';
+                    if (!secoes.pracas.children.length) secoes.pracas.innerHTML = '<p class="sem-registro" style="font-size:12px;color:#545456;">Nenhum Praça ativo.</p>';
+                }
+
+                function inserirBotoesApagarNosMenus() {
+                    if (!usuarioEhAltoComando()) return;
+                    const configs = {
+                        inicio: ['bpePolicialDestaque','Policial da Semana + Avisos','bancoBoletinsBPE'],
+                        'rankings-aba': ['rankingApreensoesBPE','Rankings e Materiais','topMateriaisBPE'],
+                        ponto: ['historicoPontosBPE','Histórico de Ponto'],
+                        apreensoes: ['rankingApreensoesBPE','Registros de Apreensões','topMateriaisBPE'],
+                        relatorios: ['bancoRelatoriosBPE','Relatórios Operacionais'],
+                        ausencias: ['bancoAusenciasBPE','Ausências e Licenças'],
+                        historia: ['historiaBPE','História do Batalhão'],
+                        necroteca: ['bancoNecrotecaBPE','Necrotério / Memorial']
+                    };
+                    Object.entries(configs).forEach(([aba, cfg]) => {
+                        const content = document.getElementById(`content-${aba}`);
+                        const header = content?.querySelector('.main-header');
+                        if (!header || header.querySelector('.menu-delete-all')) return;
+                        const btn=document.createElement('button'); btn.className='admin-delete-all menu-delete-all'; btn.style.cssText='margin-left:auto;display:block;'; btn.textContent='🗑️ APAGAR TUDO';
+                        btn.onclick=()=>apagarTudoDoMenu(cfg[0],cfg[1],cfg.slice(2)); header.appendChild(btn);
+                    });
+                }
+
+                // PONTO
+                function alternarPonto() {
+                    const btn = document.getElementById('btn-ponto-acao');
+                    const badge = document.getElementById('status-badge-ponto');
+                    const txtInicio = document.getElementById('ponto-registro-inicio');
+                    const txtFim = document.getElementById('ponto-registro-fim');
+                    const txtTotal = document.getElementById('ponto-registro-total');
+                    const agora = new Date();
+                    const hora = agora.toLocaleTimeString('pt-BR');
+                    const data = agora.toLocaleDateString('pt-BR');
+
+                    if (!pontoAberto) {
+                        pontoAberto = true; segundosAtivos = 0;
+                        if (badge) { badge.textContent="EM SERVIÇO"; badge.className="status-badge aberto"; }
+                        if (btn) { btn.textContent="ENCERRAR SERVIÇO"; btn.className="btn-ponto encerrar"; }
+                        if (txtInicio) txtInicio.textContent=`${data} às ${hora}`;
+                        if (txtFim) txtFim.textContent="--:--:--";
+                        if (txtTotal) txtTotal.textContent="Turno aberto...";
+                        localStorage.setItem('pontoHoraInicio', `${data} às ${hora}`);
+                        localStorage.setItem('pontoEstado', 'aberto');
+                        clearInterval(timerIntervalo);
+                        timerIntervalo=setInterval(()=>{ segundosAtivos++; const t=document.getElementById('ponto-timer'); if(t)t.textContent=formatarTimer(segundosAtivos); },1000);
+                    } else {
+                        pontoAberto=false; clearInterval(timerIntervalo);
+                        if (badge) { badge.textContent="FORA DE SERVIÇO"; badge.className="status-badge fechado"; }
+                        if (btn) { btn.textContent="INICIAR SERVIÇO"; btn.className="btn-ponto iniciar"; }
+                        if (txtFim) txtFim.textContent=`${data} às ${hora}`;
+                        const min=Math.floor(segundosAtivos/60);
+                        const duracaoFinal=`${Math.floor(min/60)}h ${min%60}min`;
+                        if (txtTotal) txtTotal.textContent=duracaoFinal;
+                        const lista=lerJSON('historicoPontosBPE',[]);
+                        lista.unshift({policial:localStorage.getItem('usuarioLogado'),id:localStorage.getItem('idLogado'),data,saida:hora,segundos:segundosAtivos,total:duracaoFinal});
+                        salvarJSON('historicoPontosBPE',lista);
+                        localStorage.removeItem('pontoEstado');
+                        localStorage.removeItem('pontoHoraInicio');
+                        atualizarTabelasGerais();
+                        alert("Turno finalizado com sucesso!");
+                    }
+                }
+
+                function recuperarEstadoPonto() {
+                    if (localStorage.getItem('pontoEstado') === 'aberto') {
+                        pontoAberto=true;
+                        const b=document.getElementById('status-badge-ponto');
+                        if(b){b.textContent="EM SERVIÇO";b.className="status-badge aberto";}
+                        const btn=document.getElementById('btn-ponto-acao');
+                        if(btn)btn.textContent="ENCERRAR SERVIÇO";
+                        clearInterval(timerIntervalo);
+                        timerIntervalo=setInterval(()=>{segundosAtivos++;const t=document.getElementById('ponto-timer');if(t)t.textContent=formatarTimer(segundosAtivos);},1000);
+                    }
+                }
+
+                function formatarTimer(seg) {
+                    return `${Math.floor(seg/3600).toString().padStart(2,'0')}:${Math.floor((seg%3600)/60).toString().padStart(2,'0')}:${(seg%60).toString().padStart(2,'0')}`;
+                }
+
+                // APREENSÕES / OCR
+                function simularLeituraOCR(input) {
+                    if (!input.files || !input.files[0] || typeof Tesseract === 'undefined') {
+                        alert("Não foi possível iniciar o OCR.");
+                        return;
+                    }
+                    alert("🤖 Escaneando print do inventário...");
+                    Tesseract.recognize(input.files[0], 'por+eng').then(({data:{text}})=>{
+                        const linhas=text.split('\n');
+                        const rP=lerJSON('rankingApreensoesBPE',{});
+                        const rM=lerJSON('topMateriaisBPE',{});
+                        const pChave=`${localStorage.getItem('usuarioLogado')} (ID: ${localStorage.getItem('idLogado')})`;
+                        if(!rP[pChave])rP[pChave]=0;
+                        linhas.forEach(l=>{
+                            const num=l.match(/\d+/);
+                            if(num){
+                                const qtd=parseInt(num[0]);
+                                const item=l.replace(/\d+/g,'').replace(/[:x\-_\*]/g,'').trim();
+                                if(item.length>2 && qtd>0){rP[pChave]+=qtd;rM[item]=(rM[item]||0)+qtd;}
+                            }
+                        });
+                        salvarJSON('rankingApreensoesBPE',rP);
+                        salvarJSON('topMateriaisBPE',rM);
+                        atualizarTabelasGerais();
+                        navegarAba('rankings-aba');
+                    }).catch(()=>alert("❌ Não foi possível ler o print."));
+                }
+
+                // RELATÓRIOS
+                function exibirFormularioRSO(){document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');document.getElementById('caixa-formulario-rso')?.classList.remove('hidden');}
+                function exibirFormularioGuincho(){document.getElementById('caixa-formulario-rso')?.classList.add('hidden');document.getElementById('caixa-formulario-guincho')?.classList.remove('hidden');}
+                function cancelarRSO(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-operacional')?.reset();document.getElementById('caixa-formulario-rso')?.classList.add('hidden');}}
+                function cancelarGuincho(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-guincho')?.reset();document.getElementById('gui-preview-img')?.classList.add('hidden');document.getElementById('gui-foto-base64').value="";document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');}}
+                function processarFotoVeiculo(input){if(input.files?.[0]){const leitor=new FileReader();leitor.onload=e=>{document.getElementById('gui-foto-base64').value=e.target.result;const p=document.getElementById('gui-preview-img');p.src=e.target.result;p.classList.remove('hidden');};leitor.readAsDataURL(input.files[0]);}}
+                function publicarRelatorioRSO(event){
+                    event.preventDefault();
+                    const banco=lerJSON('bancoRelatoriosBPE',[]);
+                    banco.unshift({id:Date.now(),tipo:"RSO",policialCriador:localStorage.getItem('usuarioLogado'),dataPostagem:new Date().toLocaleString('pt-BR'),batalhao:document.getElementById('rel-batalhao').value,prefixo:document.getElementById('rel-prefixo').value,dataServico:document.getElementById('rel-data').value,horaInicio:document.getElementById('rel-hora-inicio').value,horaFim:document.getElementById('rel-hora-fim').value,guarnicao:[1,2,3,4,5].map(i=>document.getElementById(`rel-h${i}`).value).filter(h=>h.trim()),historico:document.getElementById('rel-historico').value,bopm:document.getElementById('rel-bopm').value,obitos:document.getElementById('rel-obitos').value,materiais:document.getElementById('rel-materiais').value});
+                    salvarJSON('bancoRelatoriosBPE',banco);document.getElementById('form-registro-operacional').reset();document.getElementById('caixa-formulario-rso').classList.add('hidden');renderizarMuralRSO();alert("RSO protocolado!");
+                }
+                function publicarRelatorioGuincho(event){
+                    event.preventDefault();
+                    const banco=lerJSON('bancoRelatoriosBPE',[]);
+                    banco.unshift({id:Date.now(),tipo:"GUINCHO",policialCriador:localStorage.getItem('usuarioLogado'),dataPostagem:new Date().toLocaleString('pt-BR'),dataServico:document.getElementById('gui-data').value,horaInicio:document.getElementById('gui-hora-inicio').value,horaFim:document.getElementById('gui-hora-fim').value,veiculo:document.getElementById('gui-veiculo').value,placa:document.getElementById('gui-placa').value,dono:document.getElementById('gui-dono').value,retirada:document.getElementById('gui-retirada').value,destino:document.getElementById('gui-destino').value,motivo:document.getElementById('gui-motivo').value,responsavel:document.getElementById('gui-responsavel').value,foto:document.getElementById('gui-foto-base64').value});
+                    salvarJSON('bancoRelatoriosBPE',banco);document.getElementById('form-registro-guincho').reset();document.getElementById('gui-preview-img').classList.add('hidden');document.getElementById('gui-foto-base64').value="";document.getElementById('caixa-formulario-guincho').classList.add('hidden');renderizarMuralRSO();alert("Guincho protocolado!");
+                }
+                function renderizarMuralRSO(){
+                    const feed=document.getElementById('feed-mural-relatorios');if(!feed)return;
+                    const banco=lerJSON('bancoRelatoriosBPE',[]);
+                    if(!banco.length){feed.innerHTML='<p class="sem-registro">Nenhum RSO ou guincho enviado.</p>';return;}
+                    feed.innerHTML="";
+                    banco.forEach(rel=>{
+                        const card=document.createElement('div');card.className="boletim-item";card.style.cssText="background:#2c2c2e;padding:20px;border-radius:8px;margin-bottom:15px;position:relative;";
+                        const btn=`<button onclick="deletarRelatorioPeloComando('${rel.id}')" style="position:absolute;top:15px;right:15px;background:#ff1744;border:0;color:#fff;padding:6px 12px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🗑️ EXCLUIR</button>`;
+                        if(rel.tipo==="RSO"||rel.batalhao){card.style.borderLeft="5px solid #0052cc";const eq=(rel.guarnicao||[]).map((h,i)=>`<br>• ${i+1}º Homem: ${h}`).join('');card.innerHTML=`${btn}<span style="color:#0052cc;font-weight:bold;font-size:12px;">📋 RSO por ${rel.policialCriador}</span><h4>VTR ${rel.prefixo} | Batalhão: ${rel.batalhao}</h4><p style="background:#1c1c1e;padding:10px;border-radius:6px;font-size:13px;"><strong>👥 GUARNIÇÃO:</strong>${eq}</p><p style="margin-top:10px;font-size:14px;white-space:pre-wrap;"><strong>📜 HISTÓRICO:</strong><br>${rel.historico}</p>`;}
+                        else{card.style.borderLeft="5px solid #ffcc00";const img=rel.foto?`<br><img src="${rel.foto}" style="max-height:150px;margin-top:10px;border-radius:6px;border:1px solid #ffcc00;">`:"";card.innerHTML=`${btn}<span style="color:#ffcc00;font-weight:bold;font-size:12px;">🚛 GUINCHO por ${rel.policialCriador}</span><h4>VEÍCULO: ${rel.veiculo} | PLACA: ${rel.placa}</h4><p style="font-size:13px;">👤 Dono: ${rel.dono} | Trajeto: ${rel.retirada} até ${rel.destino}</p><p style="margin-top:10px;"><strong>⚠️ INFRAÇÃO:</strong> ${rel.motivo}</p>${img}`;}
+                        feed.appendChild(card);
+                    });
+                }
+                function deletarRelatorioPeloComando(id){
+                    if(!podeExcluirConteudo()){alert("🔒 Exclusão não autorizada.");return;}
+                    if(!confirm("🚨 Deseja realmente excluir este registro?"))return;
+                    const banco=lerJSON('bancoRelatoriosBPE',[]);
+                    const alvo=banco.find(r=>String(r.id)===String(id));
+                    if(alvo)registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} excluiu o relatório ${alvo.tipo||'RSO'} publicado por ${alvo.policialCriador||'Policial'}.`);
+                    salvarJSON('bancoRelatoriosBPE',banco.filter(r=>String(r.id)!==String(id)));
+                    renderizarMuralRSO();renderizarBoletinsECommunicados();alert("🗑️ Relatório excluído.");
+                }
+
+                // AUSÊNCIAS
+                function exibirFormularioAusencia(){document.getElementById('caixa-formulario-ausencia')?.classList.remove('hidden');}
+                function cancelarAusencia(){if(confirm("Limpar?")){document.getElementById('form-registro-ausencia')?.reset();document.getElementById('caixa-formulario-ausencia')?.classList.add('hidden');}}
+                function publicarAusenciaJustificada(event){
+                    event.preventDefault();
+                    const banco=lerJSON('bancoAusenciasBPE',[]);
+                    banco.unshift({id:Date.now(),policialId:document.getElementById('aus-id').value,nome:document.getElementById('aus-nome').value,inicio:document.getElementById('aus-data-inicio').value,fim:document.getElementById('aus-data-fim').value,motivo:document.getElementById('aus-motivo').value});
+                    salvarJSON('bancoAusenciasBPE',banco);document.getElementById('form-registro-ausencia').reset();document.getElementById('caixa-formulario-ausencia').classList.add('hidden');renderizarMuralAusencias();verificarStatusAusenciaUsuario();renderizarHierarquiaGeral();alert("Licença protocolada!");
+                }
+                function renderizarMuralAusencias(){
+                    const feed=document.getElementById('feed-mural-ausencias');if(!feed)return;
+                    const banco=lerJSON('bancoAusenciasBPE',[]);
+                    if(!banco.length){feed.innerHTML='<p class="sem-registro">Nenhuma ausência registrada.</p>';return;}
+                    feed.innerHTML="";
+                    banco.forEach(aus=>{
+                        const wrap=document.createElement('div');wrap.className="boletim-item";wrap.style.cssText="background:#2c2c2e;padding:20px;border-radius:8px;border-left:5px solid #ff6b00;margin-bottom:15px;position:relative;";
+                        const btn=`<button onclick="deletarAusenciaJustibilidade('${aus.id}')" style="position:absolute;top:15px;right:15px;background:#ff1744;border:0;color:#fff;padding:6px 12px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🗑️ EXCLUIR</button>`;
+                        wrap.innerHTML=`${btn}<span style="color:#ff6b00;font-weight:bold;font-size:12px;">📅 LICENÇA</span><h4>${String(aus.nome||'POLICIAL').toUpperCase()} (ID: ${aus.policialId})</h4><p style="font-size:13px;color:#8e8e93;">⏳ Período: ${aus.inicio} até ${aus.fim}</p><p style="margin-top:10px;font-size:14px;background:#1c1c1e;padding:12px;border-radius:6px;white-space:pre-wrap;"><strong>📝 MOTIVO:</strong><br>${aus.motivo}</p>`;
+                        feed.appendChild(wrap);
+                    });
+                }
+                function deletarAusenciaJustibilidade(id){
+                    if(!podeExcluirConteudo()){alert("🔒 Exclusão não autorizada.");return;}
+                    if(!confirm("Deseja anular esta licença?"))return;
+                    const banco=lerJSON('bancoAusenciasBPE',[]);const alvo=banco.find(a=>String(a.id)===String(id));
+                    if(alvo)registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} anulou a licença do ID ${alvo.policialId}.`);
+                    salvarJSON('bancoAusenciasBPE',banco.filter(a=>String(a.id)!==String(id)));
+                    renderizarMuralAusencias();verificarStatusAusenciaUsuario();renderizarHierarquiaGeral();renderizarBoletinsECommunicados();alert("Licença anulada!");
+                }
+                function verificarStatusAusenciaUsuario(){
+                    const banco=lerJSON('bancoAusenciasBPE',[]);
+                    const id=String(localStorage.getItem('idLogado')||'');
+                    const userBadge=document.querySelector('.user-badge');if(!userBadge)return;
+                    document.getElementById('legenda-ausente-vtr')?.remove();
+                    const hoje=new Date();hoje.setHours(0,0,0,0);
+                    const aus=banco.find(a=>String(a.policialId)===id&&hoje>=new Date(a.inicio+'T00:00:00')&&hoje<=new Date(a.fim+'T00:00:00'));
+                    if(aus){const label=document.createElement('span');label.id='legenda-ausente-vtr';label.textContent='[AUSÊNCIA JUSTIFICADA]';label.style.cssText='color:#ff1744;font-size:11px;font-weight:bold;margin-top:2px;display:block;';userBadge.appendChild(label);}
+                }
+
+                function podeExcluirConteudo() {
+                    if (usuarioEhAltoComando()) return true;
+                    if (localStorage.getItem('senhaExclusaoBPE') === 'BPE123') return true;
+                    const senha = prompt('🔐 Digite a senha de autorização para exclusão:');
+                    if (senha === 'BPE123') {
+                        localStorage.setItem('senhaExclusaoBPE', 'BPE123');
+                        return true;
+                    }
+                    return false;
+                }
+
+                // Exonerado NÃO é bloqueio permanente: o registro serve como histórico.
+                // Um novo pedido sempre volta para análise e somente o Alto Comando decide o retorno.
+                function aprovarSolicitacaoAcesso(id, aprovar) {
+                    if (!usuarioEhAltoComando()) { alert('🔒 Somente o Alto Comando pode aprovar ou recusar acessos.'); return; }
+                    const requests = lerJSON('bancoSolicitacoesAcessoBPE', []);
+                    const idx = requests.findIndex(r => String(r.id) === String(id) && r.status === 'pendente');
+                    if (idx < 0) return;
+                    const req = requests[idx];
+                    const exonerados = lerJSON('bancoExoneradosBPE', []);
+                    const registroExonerado = exonerados.find(x => String(x.id) === String(req.id));
+                    const usuarios = lerJSON('bancoUsuariosBPE', []);
+                    let pm = usuarios.find(u => String(u.id) === String(req.id));
+                    if (aprovar) {
+                        if (!pm) {
+                            pm = { id:req.id, usuario:req.usuario, nome:req.usuario, patente:extrairPatenteDoNome(req.usuario) || 'SOLDADO 2ª CLASSE', cargo:req.cargo || '', aprovadoAcesso:true, acessoLiberado:'sim', situacaoEstagio:'nao' };
+                            usuarios.push(pm);
+                        } else { pm.aprovadoAcesso = true; pm.acessoLiberado = 'sim'; }
+                        req.status = 'aprovado';
+                        req.aprovadoPor = localStorage.getItem('usuarioLogado') || 'Alto Comando';
+                        req.aprovadoEm = new Date().toLocaleString('pt-BR');
+                        if (registroExonerado) {
+                            registroExonerado.retornouAoBatalhao = true;
+                            registroExonerado.retornoAprovadoPor = req.aprovadoPor;
+                            registroExonerado.retornoEm = req.aprovadoEm;
+                            registroExonerado.observacaoRetorno = 'Retorno autorizado pelo Alto Comando.';
+                            salvarJSON('bancoExoneradosBPE', exonerados);
+                            registrarLogAuditoria(`RETORNO AUTORIZADO: ${req.usuario} (ID ${req.id}) havia sido exonerado e foi readmitido por decisão do Alto Comando.`);
+                        } else {
+                            registrarLogAuditoria(`Acesso APROVADO para ${req.usuario} (ID ${req.id}).`);
+                        }
+                        salvarJSON('bancoUsuariosBPE', usuarios);
+                    } else {
+                        req.status = 'recusado';
+                        req.aprovadoPor = localStorage.getItem('usuarioLogado') || 'Alto Comando';
+                        registrarLogAuditoria(`Acesso RECUSADO para ${req.usuario} (ID ${req.id}).`);
+                    }
+                    salvarJSON('bancoSolicitacoesAcessoBPE', requests);
+                    renderizarSolicitacoesAcesso();
+                }
+
+                function renderizarSolicitacoesAcesso() {
+                    const box = document.getElementById('lista-solicitacoes-acesso');
+                    if (!box) return;
+                    if (!usuarioEhAltoComando()) { box.innerHTML = '<p class="sem-registro">Área restrita ao Alto Comando.</p>'; return; }
+                    const requests = lerJSON('bancoSolicitacoesAcessoBPE', []).filter(r => r.status === 'pendente');
+                    const exonerados = lerJSON('bancoExoneradosBPE', []);
+                    box.innerHTML = requests.length ? requests.map(r => {
+                        const ex = exonerados.find(x => String(x.id) === String(r.id));
+                        const alerta = ex ? `<div style="margin-top:8px;padding:8px;border-radius:6px;background:rgba(255,23,68,.10);border:1px solid rgba(255,23,68,.35);color:#ff6b81;font-size:11px;font-weight:bold;">⚠️ JÁ FOI EXONERADO — retorno depende da decisão do Alto Comando.</div>` : '';
+                        return `<div class="approval-card"><strong style="color:#fff;">${String(r.usuario).toUpperCase()}</strong><br><span style="color:#8e8e93;font-size:11px;">ID ${r.id} • ${r.data}</span>${alerta}<div style="display:flex;gap:8px;margin-top:10px;"><button class="btn-ponto iniciar" style="margin:0;padding:8px 12px;background:#00a95c;" onclick="aprovarSolicitacaoAcesso('${r.id}',true)">✅ APROVAR</button><button class="admin-delete" onclick="aprovarSolicitacaoAcesso('${r.id}',false)">❌ RECUSAR</button></div></div>`;
+                    }).join('') : '<p class="sem-registro">Nenhuma solicitação pendente.</p>';
+                }
+
+                function apagarTudoDoMenu(chave, descricao, extras=[]) {
+                    if (!usuarioEhAltoComando()) { alert('🔒 Somente o Alto Comando pode apagar registros.'); return; }
+                    if (!confirm(`⚠️ APAGAR TUDO\n\nIsso apagará todos os registros de ${descricao}. Essa ação não pode ser desfeita.\n\nContinuar?`)) return;
+                    [chave, ...extras].forEach(k => {
+                        const valor = ['rankingApreensoesBPE','topMateriaisBPE'].includes(k) ? {} : (k === 'bpePolicialDestaque' ? null : []);
+                        salvarJSON(k, valor);
+                    });
+                    registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} apagou TODOS os registros de ${descricao}.`);
+                    atualizarTabelasGerais();
+                    renderizarMuralRSO();
+                    renderizarMuralAusencias();
+                    renderizarBoletinsECommunicados();
+                    renderizarMuralHerois();
+                    renderizarNecroteca();
+                    renderizarHistoriaBPE();
+                    alert(`🧹 Registros de ${descricao} apagados.`);
+                }
+
+                function renderizarPainelApagarTudo() {
+                    const box = document.getElementById('painel-apagar-tudo');
+                    if (!box) return;
+                    const itens = [
+                        ['historicoPontosBPE','Bater Ponto'],
+                        ['bancoRelatoriosBPE','Relatórios / RSO / Guincho'],
+                        ['bancoAusenciasBPE','Ausências / Licenças'],
+                        ['bancoBoletinsBPE','Avisos e Boletins'],
+                        ['bpePolicialDestaque','Policial da Semana'],
+                        ['rankingApreensoesBPE','Ranking de Apreensões'],
+                        ['topMateriaisBPE','Materiais Apreendidos'],
+                        ['bancoLogsDelecaoBPE','Histórico de Auditoria'],
+                        ['bancoNecrotecaBPE','Necrotério / Memorial'],
+                        ['bancoSolicitacoesAcessoBPE','Solicitações de Acesso']
+                    ];
+                    box.innerHTML = itens.map(([k,d]) => `<button class="admin-delete-all" onclick="apagarTudoDoMenu('${k}','${d}')">🗑️ APAGAR TUDO — ${d.toUpperCase()}</button>`).join('');
+                }
+
+                function excluirDestaqueSemana() {
+                    if (!podeExcluirConteudo()) { alert('🔒 Exclusão não autorizada.'); return; }
+                    if (!confirm('Excluir o Policial da Semana?')) return;
+
+                    salvarJSON('bpePolicialDestaque', null);
+
+                    // Limpa também qualquer imagem/preview ainda carregado no formulário.
+                    const arquivo = document.getElementById('adm-destaque-foto-arquivo');
+                    const preview = document.getElementById('adm-destaque-preview');
+                    const base64 = document.getElementById('adm-destaque-base64');
+                    if (arquivo) arquivo.value = '';
+                    if (preview) {
+                        preview.src = '';
+                        preview.classList.add('hidden');
+                    }
+                    if (base64) base64.value = '';
+
+                    registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} excluiu o Policial da Semana.`);
+                    renderizarBoletinsECommunicados();
+                }
+
+                function excluirBoletimOficial(id) {
+                    if (!podeExcluirConteudo()) { alert('🔒 Exclusão não autorizada.'); return; }
+                    const banco=lerJSON('bancoBoletinsBPE',[]); const alvo=banco.find(b=>String(b.id)===String(id));
+                    if(!alvo || !confirm('Excluir este aviso?')) return;
+                    salvarJSON('bancoBoletinsBPE', banco.filter(b=>String(b.id)!==String(id)));
+                    registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} excluiu o aviso ${alvo.titulo}.`); renderizarBoletinsECommunicados();
+                }
+
+                function publicarNecroteca(event) {
+                    event.preventDefault(); if(!podeGerenciarPainelAltoComando()){alert('🔒 Acesso negado. Esta área é exclusiva do Alto Comando.');return;}
+                    const banco=lerJSON('bancoNecrotecaBPE',[]); banco.unshift({id:Date.now(),nome:document.getElementById('adm-necro-nome').value,texto:document.getElementById('adm-necro-texto').value,autor:localStorage.getItem('usuarioLogado')||'Coronel',data:new Date().toLocaleString('pt-BR')});
+                    salvarJSON('bancoNecrotecaBPE',banco); document.querySelector('#content-coronel form[onsubmit="publicarNecroteca(event)"]')?.reset(); renderizarNecroteca(); alert('✝️ Registro publicado no memorial.');
+                }
+
+                function renderizarNecroteca() {
+                    const box=document.getElementById('mural-necroteca'); if(!box)return; const banco=lerJSON('bancoNecrotecaBPE',[]);
+                    box.innerHTML=banco.length?banco.map(n=>`<article class="necroteca-card"><div style="font-size:30px;">🪦</div><h3 style="color:#fff;margin:5px 0;">${String(n.nome).toUpperCase()}</h3><span style="font-size:10px;color:#777;">Registrado em ${n.data}</span><p style="white-space:pre-wrap;color:#aaa;margin-top:12px;line-height:1.6;">${n.texto}</p><button class="admin-delete" onclick="excluirNecroteca('${n.id}')">🗑️ EXCLUIR</button></article>`).join(''):'<p class="sem-registro">Nenhum registro no memorial.</p>';
+                }
+                function podeExcluirConteudoSemPrompt(){ return usuarioEhAltoComando() || localStorage.getItem('senhaExclusaoBPE')==='BPE123'; }
+                function excluirNecroteca(id){ if(!podeExcluirConteudo()){alert('🔒 Exclusão não autorizada.');return;} const b=lerJSON('bancoNecrotecaBPE',[]); if(!confirm('Excluir este registro do memorial?'))return; salvarJSON('bancoNecrotecaBPE',b.filter(x=>String(x.id)!==String(id))); registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} excluiu registro do Necrotério.`); renderizarNecroteca(); }
+
+                function salvarHistoriaBPE(event) {
+                    event.preventDefault(); if(!podeGerenciarPainelAltoComando()){alert('🔒 Acesso negado. Esta área é exclusiva do Alto Comando.');return;}
+                    salvarJSON('historiaBPE',{texto:document.getElementById('adm-historia-texto').value,autor:localStorage.getItem('usuarioLogado')||'Coronel',data:new Date().toLocaleString('pt-BR')}); renderizarHistoriaBPE(); alert('📜 História do batalhão atualizada.');
+                }
+                function renderizarHistoriaBPE(){
+                    const box=document.getElementById('mural-historia-bpe'); if(!box)return; const h=lerJSON('historiaBPE',null); box.textContent=h?.texto||'A história do batalhão ainda não foi publicada pelo Coronel.'; const input=document.getElementById('adm-historia-texto'); if(input&&h) input.value=h.texto;
+                }
+
+                // ADMINISTRAÇÃO
+                function processarFotoDestaque(input){
+                    if(input.files?.[0]){const leitor=new FileReader();leitor.onload=e=>{document.getElementById('adm-destaque-base64').value=e.target.result;const p=document.getElementById('adm-destaque-preview');p.src=e.target.result;p.classList.remove('hidden');};leitor.readAsDataURL(input.files[0]);}
+                }
+                function salvarPolicialDestaque(event){
+                    event.preventDefault();if(!podeGerenciarPainelAltoComando()){alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");return;}
+                    const dados={nome:document.getElementById('adm-destaque-nome').value,texto:document.getElementById('adm-destaque-texto').value,foto:document.getElementById('adm-destaque-base64').value||""};
+                    salvarJSON('bpePolicialDestaque',dados);document.getElementById('form-admin-destaque').reset();document.getElementById('adm-destaque-preview').classList.add('hidden');document.getElementById('adm-destaque-base64').value="";renderizarBoletinsECommunicados();alert("Policial Destaque publicado!");
+                }
+                function publicarBoletimOficial(event){
+                    event.preventDefault();if(!podeGerenciarPainelAltoComando()){alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");return;}
+                    const banco=lerJSON('bancoBoletinsBPE',[]);
+                    banco.unshift({id:Date.now(),oficial:localStorage.getItem('usuarioLogado')||'Alto Comando',data:new Date().toLocaleString('pt-BR'),titulo:document.getElementById('adm-boletim-titulo').value,texto:document.getElementById('adm-boletim-texto').value});
+                    salvarJSON('bancoBoletinsBPE',banco);document.getElementById('form-admin-boletim').reset();renderizarBoletinsECommunicados();alert("Aviso oficial publicado!");
+                }
+                function renderizarBoletinsECommunicados(){
+                    const dadosDestaque=lerJSON('bpePolicialDestaque',null);
+                    const txtNome=document.getElementById('nome-destaque');
+                    const txtTexto=document.getElementById('texto-destaque');
+                    const avatar=document.querySelector('.police-avatar');
+
+                    // Sempre limpa a imagem anterior antes de renderizar.
+                    // Isso evita que o avatar antigo permaneça quando o destaque é excluído.
+                    if (avatar) {
+                        avatar.innerHTML = '👮‍♂️';
+                        avatar.style.backgroundImage = '';
+                    }
+
+                    const cardD=txtNome?.closest('.card-destaque');
+                    cardD?.querySelector('.btn-excluir-destaque')?.remove();
+
+                    if(dadosDestaque){
+                        if(txtNome) txtNome.textContent=String(dadosDestaque.nome).toUpperCase();
+                        if(txtTexto) txtTexto.textContent=dadosDestaque.texto;
+
+                        if(avatar && dadosDestaque.foto){
+                            avatar.innerHTML=`<img src="${dadosDestaque.foto}" alt="Foto do Policial Destaque" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`;
+                        }
+
+                        if(cardD && podeGerenciarPainelAltoComando()){
+                            cardD.insertAdjacentHTML('beforeend',`<button class="admin-delete btn-excluir-destaque" style="margin:0 20px 15px;" onclick="excluirDestaqueSemana()">🗑️ EXCLUIR DESTAQUE</button>`);
+                        }
+                    } else {
+                        if(txtNome) txtNome.textContent='Nenhum destaque publicado';
+                        if(txtTexto) txtTexto.textContent='Nenhum policial fixado como destaque pelo comando para esta semana ainda.';
+                    }
+                    const feed=document.getElementById('feed-boletins-coronel');if(feed){const lista=lerJSON('bancoBoletinsBPE',[]);feed.innerHTML=lista.length?lista.map(b=>`<div style="background:#1c1c1e;padding:15px;border-radius:6px;margin-bottom:12px;border-left:3px solid #0052cc;position:relative;"><strong style="color:#fff;font-size:14px;display:block;padding-right:90px;">📢 ${String(b.titulo).toUpperCase()}</strong><span style="color:#8e8e93;font-size:11px;">Publicado por ${b.oficial} em ${b.data}</span><p style="color:#aeaea3;font-size:13px;margin-top:8px;white-space:pre-wrap;">${b.texto}</p><button class="admin-delete" style="position:absolute;top:12px;right:12px;" onclick="excluirBoletimOficial('${b.id}')">🗑️ EXCLUIR</button></div>`).join(''):'<p class="sem-registro">Nenhum aviso publicado.</p>';}
+                    const tabela=document.getElementById('tabela-logs-auditoria-coronel');
+                    renderizarSolicitacoesAcesso(); renderizarPainelApagarTudo();
+                    if(tabela){const logs=lerJSON('bancoLogsDelecaoBPE',[]);tabela.innerHTML=logs.length?logs.map(l=>`<tr><td style="color:#ff1744;font-size:12px;white-space:nowrap;font-weight:bold;">${l.dataHora}</td><td style="color:#aeaea3;font-size:13px;">${l.mensagem}</td></tr>`).join(''):'<tr><td colspan="2" class="sem-registro">Nenhum log registrado.</td></tr>';}
+                }
+
+
+                function renderizarMuralHerois() {
+                    const box = document.getElementById('mural-homenagens-batalhao');
+                    if (!box) return;
+
+                    const herois = lerJSON('bancoHeroisBPE', []);
+                    if (!herois.length) {
+                        box.innerHTML = '<p class="sem-registro" style="grid-column:1/-1;">Nenhuma homenagem registrada no mural.</p>';
+                        return;
+                    }
+
+                    box.innerHTML = herois.map(h => {
+                        const gold = h.destaque !== 'blue';
+                        const border = gold ? '#ffcc00' : '#0052cc';
+                        const header = gold ? 'card-header-gold' : 'card-header-blue';
+                        const icon = h.icone || '🎖️';
+                        return `
+                            <article class="card" style="border:1px solid ${border};border-left:5px solid ${border};position:relative;">
+                                <div class="${header}">🏅 HOMENAGEM</div>
+                                <div style="padding:20px;">
+                                    <div style="font-size:38px;margin-bottom:8px;">${icon}</div>
+                                    <h3 style="color:#fff;margin:0 0 6px;">${String(h.nome || '').toUpperCase()}</h3>
+                                    <span style="color:${gold ? '#ffcc00' : '#5da9ff'};font-size:11px;font-weight:bold;">${String(h.cargo || '').toUpperCase()}</span>
+                                    <p style="color:#aeaea3;line-height:1.7;margin-top:15px;white-space:pre-wrap;">${h.texto || ''}</p>
+                                </div>
+                            </article>`;
+                    }).join('');
+                }
+
+                function renderizarAdminHerois() {
+                    const box = document.getElementById('lista-admin-herois');
+                    if (!box) return;
+
+                    if (!usuarioEhAltoComando()) {
+                        box.innerHTML = '<p class="sem-registro">Área restrita ao Alto Comando.</p>';
+                        return;
+                    }
+
+                    const herois = lerJSON('bancoHeroisBPE', []);
+                    box.innerHTML = herois.length ? herois.map(h => `
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;margin-top:8px;background:#1c1c1e;border:1px solid #3a3a3c;border-radius:7px;">
+                            <div>
+                                <strong style="color:#fff;">${String(h.icone || '🎖️')} ${String(h.nome || '').toUpperCase()}</strong>
+                                <div style="color:#8e8e93;font-size:11px;margin-top:4px;">${String(h.cargo || '').toUpperCase()}</div>
+                            </div>
+                            <button class="admin-delete" onclick="removerHeroiMural('${String(h.id).replace(/'/g, "\\'")}')">🗑️ REMOVER</button>
+                        </div>
+                    `).join('') : '<p class="sem-registro">Nenhum herói cadastrado.</p>';
+                }
+
+                function adicionarHeroiMural(event) {
+                    event.preventDefault();
+                    if (!usuarioEhAltoComando()) {
+                        alert('🔒 Somente o Alto Comando pode administrar o Mural dos Heróis.');
+                        return;
+                    }
+
+                    const nome = document.getElementById('adm-heroi-nome')?.value.trim();
+                    const cargo = document.getElementById('adm-heroi-cargo')?.value.trim();
+                    const texto = document.getElementById('adm-heroi-texto')?.value.trim();
+                    const icone = document.getElementById('adm-heroi-icone')?.value.trim() || '🎖️';
+
+                    if (!nome || !cargo || !texto) {
+                        alert('Preencha nome, cargo e homenagem.');
+                        return;
+                    }
+
+                    const banco = lerJSON('bancoHeroisBPE', []);
+                    banco.unshift({
+                        id: 'heroi-' + Date.now(),
+                        nome,
+                        cargo,
+                        texto,
+                        icone,
+                        destaque: 'gold'
+                    });
+
+                    salvarJSON('bancoHeroisBPE', banco);
+                    registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} adicionou ${nome} ao Mural dos Heróis.`);
+                    document.querySelector('#content-coronel form[onsubmit="adicionarHeroiMural(event)"]')?.reset();
+                    if (document.getElementById('adm-heroi-icone')) document.getElementById('adm-heroi-icone').value = '🎖️';
+                    renderizarMuralHerois();
+                    renderizarAdminHerois();
+                    alert('🏅 Homenagem adicionada ao Mural dos Heróis.');
+                }
+
+                function removerHeroiMural(id) {
+                    if (!usuarioEhAltoComando()) {
+                        alert('🔒 Somente o Alto Comando pode remover homenagens.');
+                        return;
+                    }
+
+                    const banco = lerJSON('bancoHeroisBPE', []);
+                    const alvo = banco.find(h => String(h.id) === String(id));
+                    if (!alvo) return;
+
+                    if (!confirm(`Remover a homenagem de ${alvo.nome} do Mural dos Heróis?`)) return;
+
+                    salvarJSON('bancoHeroisBPE', banco.filter(h => String(h.id) !== String(id)));
+                    registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} removeu ${alvo.nome} do Mural dos Heróis.`);
+                    renderizarMuralHerois();
+                    renderizarAdminHerois();
+                }
+
+                // TABELAS / RANKINGS
+                function atualizarTabelasGerais(){
+                    const pontos=lerJSON('historicoPontosBPE',[]);
+                    const feed=document.getElementById('feed-publico-pontos');
+                    if(feed)feed.innerHTML=pontos.map(p=>`<div class="ponto-post-publico"><strong>👮‍♂️ ${p.policial}</strong><br><span>⏳ Turno: ${p.total}</span></div>`).join('')||'<p class="sem-registro">Nenhum turno finalizado recentemente.</p>';
+
+                    const tAtiv=document.getElementById('tabela-ranking-atividade');
+                    if(tAtiv){
+                        const cons={};
+                        pontos.forEach(p=>{const k=`${p.policial} (ID: ${p.id})`;if(!cons[k])cons[k]={seg:0,ult:p.data&&p.saida?`${p.data} às ${p.saida}`:(p.saida||"Sem registro")};cons[k].seg+=parseInt(p.segundos)||0;});
+                        const arr=Object.keys(cons).map(k=>({n:k,s:cons[k].seg,u:cons[k].ult})).sort((a,b)=>b.s-a.s);
+                        tAtiv.innerHTML=arr.map((p,i)=>`<tr><td><strong>${i+1}º</strong></td><td>${p.n}</td><td>${p.u}</td><td style="color:#ffcc00;font-weight:bold;">${Math.floor(p.s/3600)}h ${Math.floor((p.s%3600)/60)}m</td></tr>`).join('')||'<tr><td colspan="4" class="sem-registro">Nenhum plantão registrado.</td></tr>';
+                    }
+
+                    const dApre=lerJSON('rankingApreensoesBPE',{});
+                    const tApre=document.getElementById('tabela-ranking-apreensoes');
+                    if(tApre){const arr=Object.keys(dApre).map(k=>({n:k,t:dApre[k]})).sort((a,b)=>b.t-a.t);tApre.innerHTML=arr.map((p,i)=>`<tr><td><strong>${i+1}º</strong></td><td>${p.n}</td><td style="color:#00e676;font-weight:bold;">${p.t} objetos</td></tr>`).join('')||'<tr><td colspan="3" class="sem-registro">Nenhum dado computado.</td></tr>';}
+
+                    const dMat=lerJSON('topMateriaisBPE',{});const arrM=Object.keys(dMat).map(o=>({nome:o,qtd:dMat[o]})).sort((a,b)=>b.qtd-a.qtd);
+                    const tMat=document.getElementById('tabela-ranking-materiais-coletivo');
+                    if(tMat)tMat.innerHTML=arrM.map(x=>`<tr><td>📦 ${x.nome.toUpperCase()}</td><td style="color:#ffcc00;font-weight:bold;">${x.qtd} unidades</td></tr>`).join('')||'<tr><td colspan="2" class="sem-registro">Nenhum material cadastrado.</td></tr>';
+                    const resumo=document.getElementById('resumo-top3-materiais');
+                    if(resumo)resumo.innerHTML=arrM.slice(0,3).map((x,i)=>`<li><span class="rank-pos">${i+1}º</span><span class="rank-item">📦 ${x.nome.toUpperCase()}:</span><span class="rank-qtd">${x.qtd} UNIDADES</span></li>`).join('')||'<li><span class="rank-pos">1º</span><span class="rank-item">Nenhum item registrado</span></li>';
+                }
+
+                function fazerLogout(){
+                    localStorage.removeItem('acessoSupremo');
+                    window.location.href="cadastro.html";
+                }
+            </script>
+            <div class="site-credit">Site criado por Palmeira • 20/08/2026</div>
+        </main>
+    </div>
+</body>
+</html>
