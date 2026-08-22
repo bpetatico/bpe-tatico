@@ -324,7 +324,9 @@
                                     <div class="sem-registro">Nenhum print aguardando envio.</div>
                                 </div>
                                 <button id="btn-enviar-apreensoes" type="button" class="btn-ponto iniciar" style="width:100%;margin-top:15px;" onclick="enviarApreensoesPendentes()" disabled>📤 ENVIAR APREENSÕES</button>
-                                <p style="margin-top:12px;color:#aaa;font-size:13px;">Depois que o primeiro print for adicionado, informe manualmente os materiais daquele print. Ex.: <strong>20 maconha, 10 maconhas, 1 pistola</strong>. O sistema normaliza singular/plural, acumula as quantidades no montante amarelo e conta os tipos de material de cada print no ranking azul.</p>
+                                <p style="margin-top:12px;color:#aaa;font-size:13px;">Após anexar cada print, o campo <strong>Materiais apreendidos</strong> aparece imediatamente para você informar as quantidades. Você pode adicionar vários prints na mesma postagem. O print fica visível para conferência e também é arquivado para fiscalização posterior.</p>
+                            </div>
+                            <div id="historico-apreensoes-fiscalizacao" style="margin-top:18px;"></div>
                             </div>
                         </div>
                     </div>
@@ -712,7 +714,7 @@
             'usuariosBPE', 'bancoUsuariosBPE', 'historicoPontosBPE', 'rankingApreensoesBPE',
             'topMateriaisBPE', 'bancoRelatoriosBPE', 'bancoLogsDelecaoBPE', 'bancoAusenciasBPE',
             'bancoBoletinsBPE', 'bancoSolicitacoesAcessoBPE', 'bancoNecrotecaBPE',
-            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bpePolicialDestaque', 'bpePolicialDestaqueExcluidoEm', 'historiaBPE'
+            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bancoApreensoesBPE', 'bpePolicialDestaque', 'bpePolicialDestaqueExcluidoEm', 'historiaBPE'
         ];
         let bpeBancoPronto = false;
         let bpeSincronizando = null;
@@ -915,6 +917,7 @@
                 if (!localStorage.getItem('historicoPontosBPE')) salvarJSON('historicoPontosBPE', []);
                 if (!localStorage.getItem('rankingApreensoesBPE')) salvarJSON('rankingApreensoesBPE', {});
                 if (!localStorage.getItem('topMateriaisBPE')) salvarJSON('topMateriaisBPE', {});
+                if (!localStorage.getItem('bancoApreensoesBPE')) salvarJSON('bancoApreensoesBPE', []);
                 if (!localStorage.getItem('bancoRelatoriosBPE')) salvarJSON('bancoRelatoriosBPE', []);
                 if (!localStorage.getItem('bancoLogsDelecaoBPE')) salvarJSON('bancoLogsDelecaoBPE', []);
                 if (!localStorage.getItem('bancoAusenciasBPE')) salvarJSON('bancoAusenciasBPE', []);
@@ -1209,7 +1212,8 @@
                     }
                     if (abaNome === 'historia') renderizarHistoriaBPE();
                     if (abaNome === 'necroteca') renderizarNecroteca();
-                }
+                
+                    if (abaNome === 'apreensoes') renderizarHistoricoApreensoes();}
 
                 function verificarAcessoPainelAdministrativoGeral() {
                     const btnAdmin = document.getElementById('btn-admin');
@@ -1805,72 +1809,84 @@
                     return encontrados;
                 }
 
+                function escaparHTMLApreensao(valor){
+                    return String(valor ?? '').replace(/[&<>\'\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+                }
+
+                function compactarImagemApreensao(file){
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const limite = 1000;
+                                const escala = Math.min(1, limite / Math.max(img.width, img.height));
+                                const canvas = document.createElement('canvas');
+                                canvas.width = Math.max(1, Math.round(img.width * escala));
+                                canvas.height = Math.max(1, Math.round(img.height * escala));
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.68));
+                            };
+                            img.onerror = reject;
+                            img.src = reader.result;
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                }
+
                 function atualizarPreviewMateriaisApreensao(){
                     const preview = document.getElementById('preview-materiais-apreensao');
                     if(!preview) return;
-
                     const acumulado = {};
-                    printsApreensaoPendentes.forEach(print => {
-                        (print.materiais || []).forEach(m => {
-                            acumulado[m.chave] = (acumulado[m.chave] || 0) + m.qtd;
-                        });
-                    });
-
+                    printsApreensaoPendentes.forEach(print => (print.materiais || []).forEach(m => acumulado[m.chave] = (acumulado[m.chave] || 0) + m.qtd));
                     const arr = Object.keys(acumulado);
                     if(!arr.length){
-                        preview.innerHTML = '<div style="color:#aaa;padding:10px 0;">📦 O acumulado dos materiais aparecerá aqui conforme você preencher os prints.</div>';
+                        preview.innerHTML = '<div style="color:#aaa;padding:10px 0;">📦 O acumulado desta postagem aparecerá aqui conforme você preencher os materiais.</div>';
                         return;
                     }
-
-                    preview.innerHTML = '<strong style="color:#ffcc00;">📦 ACUMULADO DA POSTAGEM</strong><div style="margin-top:8px;">' +
-                        arr.map(k => `<div style="padding:4px 0;">${rotuloMaterial(k)}: <strong>${acumulado[k]}</strong></div>`).join('') +
-                        '</div>';
+                    preview.innerHTML = '<strong style="color:#ffcc00;">📦 ACUMULADO DA POSTAGEM</strong><div style="margin-top:8px;">' + arr.map(k => `<div style="padding:4px 0;">${escaparHTMLApreensao(rotuloMaterial(k))}: <strong>${acumulado[k]}</strong></div>`).join('') + '</div>';
                 }
 
                 function atualizarFilaApreensoes(){
                     const box = document.getElementById('fila-prints-apreensao');
                     const btn = document.getElementById('btn-enviar-apreensoes');
                     if(!box) return;
-
                     if(!printsApreensaoPendentes.length){
                         box.innerHTML = '<div class="sem-registro">Nenhum print aguardando envio.</div>';
-                        const preview = document.getElementById('preview-materiais-apreensao');
-                        if(preview) preview.remove();
+                        document.getElementById('preview-materiais-apreensao')?.remove();
                     } else {
                         box.innerHTML = printsApreensaoPendentes.map((p,i) => {
-                            const materiais = (p.materiais || []);
-                            const resumo = materiais.length
-                                ? materiais.map(m => `${m.item}: ${m.qtd}`).join(' • ')
-                                : 'Nenhum material informado ainda.';
-                            return `<div style="padding:12px;border-bottom:1px solid #333;">
-                                <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
-                                    <strong>📸 Print ${i+1}</strong>
-                                    <button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button>
-                                </div>
-                                <label style="display:block;margin-top:10px;color:#ddd;font-weight:bold;">Materiais apreendidos neste print:</label>
-                                <textarea id="materiais-print-${i}" rows="2" style="width:100%;box-sizing:border-box;margin-top:6px;padding:10px;background:#111;color:#fff;border:1px solid #555;border-radius:8px;resize:vertical;" placeholder="Ex.: 20 maconha, 10 maconhas, 1 pistola" oninput="atualizarMateriaisDoPrint(${i}, this.value)">${p.textoMateriais || ''}</textarea>
-                                <div style="margin-top:6px;color:#aaa;font-size:12px;">O sistema junta automaticamente singular/plural. Ex.: <strong>20 maconha + 10 maconhas = 30 maconha</strong>.</div>
-                                <div style="margin-top:7px;color:#ddd;font-size:13px;">Resumo deste print: ${resumo}</div>
-                            </div>`;
+                            const materiais = p.materiais || [];
+                            const resumo = materiais.length ? materiais.map(m => `${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ') : 'Nenhum material informado ainda.';
+                            const imagem = p.previewDataUrl
+                                ? `<div style="margin-top:12px;background:#101010;border:1px solid #3a3a3a;border-radius:10px;padding:8px;text-align:center;"><div style="color:#aaa;font-size:11px;font-weight:bold;text-align:left;margin:0 0 6px;">👁️ VISUALIZAÇÃO DO PRINT — será arquivado para fiscalização</div><img src="${p.previewDataUrl}" alt="Print da apreensão ${i+1}" style="display:block;max-width:100%;max-height:520px;margin:0 auto;border-radius:7px;object-fit:contain;"></div>`
+                                : '<div style="margin-top:12px;color:#aaa;font-size:12px;">⏳ Preparando visualização do print...</div>';
+                            return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;"><strong>📸 Print ${i+1}</strong><button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button></div>${imagem}<label style="display:block;margin-top:14px;color:#ffcc00;font-weight:bold;">📦 MATERIAIS APREENDIDOS NESTE PRINT:</label><textarea id="materiais-print-${i}" rows="2" style="width:100%;box-sizing:border-box;margin-top:6px;padding:11px;background:#111;color:#fff;border:1px solid #555;border-radius:8px;resize:vertical;" placeholder="Ex.: 20 maconha, 10 maconhas, 1 pistola" oninput="atualizarMateriaisDoPrint(${i}, this.value)">${escaparHTMLApreensao(p.textoMateriais || '')}</textarea><div style="margin-top:6px;color:#aaa;font-size:12px;">Digite quantidade + material. Singular/plural e pequenas variações são agrupados automaticamente.</div><div id="resumo-print-${i}" style="margin-top:8px;color:#ddd;font-size:13px;">Resumo deste print: ${resumo}</div></div>`;
                         }).join('');
-
-                        if(!document.getElementById('preview-materiais-apreensao')){
-                            const preview = document.createElement('div');
+                        let preview = document.getElementById('preview-materiais-apreensao');
+                        if(!preview){
+                            preview = document.createElement('div');
                             preview.id = 'preview-materiais-apreensao';
                             preview.style.cssText = 'margin-top:12px;padding:12px;background:#1b1b1b;border:1px solid #555;border-radius:8px;';
                             box.appendChild(preview);
                         }
                         atualizarPreviewMateriaisApreensao();
                     }
-
                     if(btn) btn.disabled = !printsApreensaoPendentes.length;
                 }
 
                 function atualizarMateriaisDoPrint(indice, texto){
-                    if(!printsApreensaoPendentes[indice]) return;
-                    printsApreensaoPendentes[indice].textoMateriais = texto;
-                    printsApreensaoPendentes[indice].materiais = interpretarMateriaisDigitados(texto);
-                    atualizarFilaApreensoes();
+                    const p = printsApreensaoPendentes[indice];
+                    if(!p) return;
+                    p.textoMateriais = texto;
+                    p.materiais = interpretarMateriaisDigitados(texto);
+                    const resumo = document.getElementById(`resumo-print-${indice}`);
+                    if(resumo){
+                        resumo.innerHTML = p.materiais.length ? 'Resumo deste print: ' + p.materiais.map(m => `${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ') : 'Resumo deste print: <span style="color:#aaa;">Nenhum material informado ainda.</span>';
+                    }
+                    atualizarPreviewMateriaisApreensao();
                 }
 
                 function removerPrintApreensao(indice){
@@ -1880,19 +1896,14 @@
 
                 async function processarImagemApreensao(file){
                     if(!file || !file.type || !file.type.startsWith('image/')) return;
-
-                    // O print fica salvo na fila imediatamente. O preenchimento manual substitui
-                    // a dependência do OCR e evita falsos positivos/erros de leitura do inventário.
-                    printsApreensaoPendentes.push({
-                        file,
-                        materiais: [],
-                        textoMateriais: ''
-                    });
+                    const item = {file, materiais:[], textoMateriais:'', previewDataUrl:''};
+                    printsApreensaoPendentes.push(item);
                     atualizarFilaApreensoes();
-
-                    const numero = printsApreensaoPendentes.length;
-                    const campo = document.getElementById(`materiais-print-${numero-1}`);
-                    if(campo) campo.focus();
+                    const indice = printsApreensaoPendentes.length - 1;
+                    try { item.previewDataUrl = await compactarImagemApreensao(file); }
+                    catch(e){ console.error('Falha ao preparar preview da apreensão:',e); }
+                    atualizarFilaApreensoes();
+                    document.getElementById(`materiais-print-${indice}`)?.focus();
                 }
 
                 function adicionarPrintsApreensao(input){
@@ -1900,72 +1911,53 @@
                     input.value = '';
                 }
 
+                function renderizarHistoricoApreensoes(){
+                    const area = document.getElementById('historico-apreensoes-fiscalizacao');
+                    if(!area) return;
+                    if(typeof usuarioEhAltoComando !== 'function' || !usuarioEhAltoComando()){ area.innerHTML=''; return; }
+                    const banco = lerJSON('bancoApreensoesBPE',[]);
+                    if(!banco.length){
+                        area.innerHTML='<div class="card" style="padding:16px;"><strong>🔎 FISCALIZAÇÃO DE APREENSÕES</strong><p style="color:#aaa;margin-bottom:0;">Nenhuma apreensão enviada para conferência.</p></div>';
+                        return;
+                    }
+                    area.innerHTML=`<div class="card" style="padding:0;overflow:hidden;"><div class="card-header-gold">🔎 FISCALIZAÇÃO DE APREENSÕES — ALTO COMANDO</div><div style="padding:12px;">${banco.slice(0,20).map(reg=>{
+                        const mats=(reg.materiais||[]).map(m=>`${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ')||'Não informado';
+                        const prints=(reg.prints||[]).map((im,j)=>`<details style="background:#111;border:1px solid #333;border-radius:8px;padding:7px;min-width:170px;"><summary style="cursor:pointer;font-weight:bold;">📸 Ver print ${j+1}</summary><img src="${im.dataUrl}" alt="Print arquivado ${j+1}" style="display:block;max-width:100%;max-height:500px;margin-top:8px;border-radius:6px;"><div style="color:#aaa;font-size:11px;margin-top:6px;">${escaparHTMLApreensao((im.materiais||[]).map(m=>`${m.item}: ${m.qtd}`).join(' • '))}</div></details>`).join('');
+                        return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="font-weight:bold;">${escaparHTMLApreensao(reg.policial||'Policial')}</div><div style="color:#999;font-size:12px;margin:3px 0 9px;">${escaparHTMLApreensao(reg.data||'')} — ${reg.prints?.length||0} print(s)</div><div style="color:#ffcc00;font-size:13px;margin-bottom:10px;">📦 ${mats}</div><div style="display:flex;gap:10px;flex-wrap:wrap;">${prints}</div></div>`;
+                    }).join('')}</div></div>`;
+                }
+
                 function enviarApreensoesPendentes(){
-                    if(!printsApreensaoPendentes.length){
-                        alert('⚠️ Adicione pelo menos um print antes de enviar.');
-                        return;
-                    }
-
-                    // Todos os prints precisam ter pelo menos um material com quantidade válida.
-                    const semMaterial = printsApreensaoPendentes.findIndex(p => !(p.materiais || []).length);
-                    if(semMaterial >= 0){
-                        alert(`⚠️ Informe os materiais apreendidos no Print ${semMaterial+1}.\n\nExemplo: 20 maconha, 10 maconhas, 1 pistola.`);
-                        const campo = document.getElementById(`materiais-print-${semMaterial}`);
-                        if(campo) campo.focus();
-                        return;
-                    }
-
-                    const rP = lerJSON('rankingApreensoesBPE',{});
-                    const rM = lerJSON('topMateriaisBPE',{});
-                    const pChave = `${localStorage.getItem('usuarioLogado')} (ID: ${localStorage.getItem('idLogado')})`;
-
-                    // AZUL: cada TIPO DE MATERIAL presente em CADA PRINT vale 1 objeto.
-                    // Print 1: 2 maconhas + 3 armas = 2 objetos.
-                    // Print 2: 1 arma = +1 objeto. Total = 3 objetos.
-                    const objetosIdentificados = printsApreensaoPendentes.reduce((total, print) => {
-                        return total + (print.materiais || []).length;
-                    }, 0);
-                    rP[pChave] = (rP[pChave] || 0) + objetosIdentificados;
-
-                    // AMARELO: soma as quantidades, agrupando singular/plural e nomes equivalentes.
-                    printsApreensaoPendentes.forEach(print => {
-                        (print.materiais || []).forEach(m => {
-                            const chaveExistente = Object.keys(rM).find(k => normalizarMaterialDigitado(k) === m.chave);
-                            const chave = chaveExistente || m.item;
-                            rM[chave] = (rM[chave] || 0) + m.qtd;
-                        });
-                    });
-
-                    salvarJSON('rankingApreensoesBPE',rP);
-                    salvarJSON('topMateriaisBPE',rM);
-
-                    const totalPrints = printsApreensaoPendentes.length;
-                    const totalTipos = objetosIdentificados;
-                    const totalUnidades = printsApreensaoPendentes.reduce((s,p)=>s+(p.materiais||[]).reduce((t,r)=>t+r.qtd,0),0);
-                    printsApreensaoPendentes = [];
-                    atualizarFilaApreensoes();
-                    atualizarTabelasGerais();
-
-                    alert(`✅ ${totalPrints} print(s) enviado(s).\n\n🔵 ${totalTipos} objeto(s) contabilizado(s) no ranking individual.\n📦 ${totalUnidades} unidade(s) de material acumulada(s) no montante geral.`);
+                    if(!printsApreensaoPendentes.length){ alert('⚠️ Adicione pelo menos um print antes de enviar.'); return; }
+                    const semMaterial=printsApreensaoPendentes.findIndex(p=>!(p.materiais||[]).length);
+                    if(semMaterial>=0){ alert(`⚠️ Informe os materiais apreendidos no Print ${semMaterial+1}.\n\nExemplo: 20 maconha, 10 maconhas, 1 pistola.`); document.getElementById(`materiais-print-${semMaterial}`)?.focus(); return; }
+                    const rP=lerJSON('rankingApreensoesBPE',{}), rM=lerJSON('topMateriaisBPE',{});
+                    const pChave=`${localStorage.getItem('usuarioLogado')} (ID: ${localStorage.getItem('idLogado')})`;
+                    const objetosIdentificados=printsApreensaoPendentes.reduce((t,p)=>t+(p.materiais||[]).length,0);
+                    rP[pChave]=(rP[pChave]||0)+objetosIdentificados;
+                    printsApreensaoPendentes.forEach(p=>(p.materiais||[]).forEach(m=>{const ex=Object.keys(rM).find(k=>normalizarMaterialDigitado(k)===m.chave);const k=ex||m.item;rM[k]=(rM[k]||0)+m.qtd;}));
+                    const banco=lerJSON('bancoApreensoesBPE',[]);
+                    const materiais=printsApreensaoPendentes.flatMap(p=>p.materiais||[]).reduce((acc,m)=>{const ex=acc.find(x=>x.chave===m.chave);if(ex)ex.qtd+=m.qtd;else acc.push({chave:m.chave,item:m.item,qtd:m.qtd});return acc;},[]);
+                    banco.unshift({id:Date.now(),policial:localStorage.getItem('usuarioLogado')||'Policial',policialId:localStorage.getItem('idLogado')||'',patente:localStorage.getItem('cargoUsuario')||'',data:new Date().toLocaleString('pt-BR'),materiais,objetos:objetosIdentificados,prints:printsApreensaoPendentes.map(p=>({dataUrl:p.previewDataUrl,materiais:p.materiais||[]}))});
+                    salvarJSON('rankingApreensoesBPE',rP); salvarJSON('topMateriaisBPE',rM); salvarJSON('bancoApreensoesBPE',banco.slice(0,50));
+                    const totalPrints=printsApreensaoPendentes.length,totalTipos=objetosIdentificados,totalUnidades=printsApreensaoPendentes.reduce((s,p)=>s+(p.materiais||[]).reduce((t,r)=>t+r.qtd,0),0);
+                    printsApreensaoPendentes=[]; atualizarFilaApreensoes(); atualizarTabelasGerais(); renderizarHistoricoApreensoes();
+                    alert(`✅ ${totalPrints} print(s) enviado(s).\n\n🔵 ${totalTipos} objeto(s) contabilizado(s) no ranking individual.\n📦 ${totalUnidades} unidade(s) de material acumulada(s) no montante geral.\n\n🗂️ Os prints foram arquivados para fiscalização do Alto Comando.`);
                     navegarAba('rankings-aba');
                 }
 
                 // Ctrl+V / colar imagem diretamente no menu de apreensões.
                 document.addEventListener('paste', function(event){
-                    const aba = document.getElementById('content-apreensoes');
+                    const aba=document.getElementById('content-apreensoes');
                     if(!aba || aba.classList.contains('hidden')) return;
-                    const itens = Array.from(event.clipboardData?.items || []);
-                    const imagem = itens.find(item => item.type && item.type.startsWith('image/'));
+                    const itens=Array.from(event.clipboardData?.items||[]), imagem=itens.find(item=>item.type&&item.type.startsWith('image/'));
                     if(!imagem) return;
                     event.preventDefault();
-                    const file = imagem.getAsFile();
+                    const file=imagem.getAsFile();
                     if(file) processarImagemApreensao(file);
                 });
 
-                // Compatibilidade com chamadas antigas.
-                function simularLeituraOCR(input){
-                    adicionarPrintsApreensao(input);
-                }
+                function simularLeituraOCR(input){ adicionarPrintsApreensao(input); }
 
                 // RELATÓRIOS
                 function exibirFormularioRSO(){document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');document.getElementById('caixa-formulario-rso')?.classList.remove('hidden');}
