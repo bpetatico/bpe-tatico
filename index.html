@@ -55,7 +55,7 @@
         <!-- FORMULÁRIO DE LOGIN (SEGUNDO ACESSO EM DIANTE) -->
         <form id="form-login" class="auth-form" onsubmit="executarLogin(event)">
             <div class="input-group">
-                <label for="usuario-login">Patente e Nome</label>
+                <label for="usuario-login">Nome</label>
                 <input type="text" id="usuario-login" autocomplete="username" required>
             </div>
 
@@ -77,8 +77,31 @@
         </div>
         <form id="form-cadastro" class="auth-form hidden" onsubmit="executarCadastro(event)">
             <div class="input-group">
-                <label for="nome-cadastro" id="label-nome-cadastro">Nome de Usuário (Patente e Nome)</label>
+                <label for="nome-cadastro" id="label-nome-cadastro">Nome do Policial</label>
                 <input type="text" id="nome-cadastro" required>
+            </div>
+
+            <div class="input-group" id="grupo-patente-cadastro">
+                <label for="patente-cadastro" id="label-patente-cadastro">Patente</label>
+                <select id="patente-cadastro" required style="width:100%;padding:11px;background:#2c2c2e;border:1px solid #3a3a3c;color:white;border-radius:6px;">
+                    <option value="">Selecione sua patente</option>
+                    <option>SOLDADO 2ª CLASSE</option>
+                    <option>SOLDADO 1ª CLASSE</option>
+                    <option>CABO</option>
+                    <option>3º SARGENTO</option>
+                    <option>2º SARGENTO</option>
+                    <option>1º SARGENTO</option>
+                    <option>SUB-TENENTE</option>
+                    <option>ASPIRANTE OFICIAL</option>
+                    <option>2º TENENTE</option>
+                    <option>1º TENENTE</option>
+                    <option>CAPITÃO</option>
+                    <option>MAJOR</option>
+                    <option>TENENTE CORONEL</option>
+                    <option>CORONEL</option>
+                    <option>COMANDO GERAL</option>
+                    <option>SUB COMANDO GERAL</option>
+                </select>
             </div>
             
             <div class="input-group">
@@ -237,6 +260,8 @@
             const titulo = document.getElementById('modo-cadastro-titulo');
             const nomeLabel = document.getElementById('label-nome-cadastro');
             const idLabel = document.getElementById('label-id-cadastro');
+            const grupoPatente = document.getElementById('grupo-patente-cadastro');
+            const patenteInput = document.getElementById('patente-cadastro');
             const batalhaoLabel = document.getElementById('label-senha-batalhao');
             const pessoalLabel = document.getElementById('label-senha-pessoal-cadastro');
             const confirmacaoLabel = document.getElementById('label-senha-pessoal-confirmacao');
@@ -244,11 +269,13 @@
             const tabCadastro = document.getElementById('tab-cadastro');
 
             if (!titulo) return;
+            if (grupoPatente) grupoPatente.style.display = modoRecuperacaoSenha ? 'none' : '';
+            if (patenteInput) patenteInput.required = !modoRecuperacaoSenha;
 
             if (modoRecuperacaoSenha) {
                 titulo.textContent = 'RECUPERAÇÃO DA SENHA PESSOAL';
                 titulo.classList.remove('hidden');
-                nomeLabel.textContent = 'Patente e Nome';
+                nomeLabel.textContent = 'Nome do Policial';
                 idLabel.textContent = 'ID do Jogo';
                 batalhaoLabel.textContent = 'Senha do Batalhão';
                 pessoalLabel.textContent = 'Registre sua Nova Senha Pessoal';
@@ -258,7 +285,7 @@
             } else {
                 titulo.textContent = 'PRIMEIRO ACESSO';
                 titulo.classList.remove('hidden');
-                nomeLabel.textContent = 'Nome de Usuário (Patente e Nome)';
+                nomeLabel.textContent = 'Nome do Policial';
                 idLabel.textContent = 'ID do Jogo';
                 batalhaoLabel.textContent = 'Senha do Batalhão';
                 pessoalLabel.textContent = 'Registre sua Senha Pessoal';
@@ -327,6 +354,21 @@
                 .join('');
         }
 
+        function normalizarNomePolicial(valor) {
+            let nome = String(valor || '').trim();
+            // Compatibilidade com cadastros antigos que guardavam a patente dentro do nome.
+            nome = nome.replace(/^(?:SOLDADO 2ª CLASSE|SOLDADO 1ª CLASSE|CABO|3º SARGENTO|2º SARGENTO|1º SARGENTO|SUB[- ]TENENTE|ASPIRANTE OFICIAL|2º TENENTE|1º TENENTE|CAPITÃO|MAJOR|TENENTE[- ]CORONEL|CORONEL|COMANDO GERAL|SUB COMANDO GERAL)\s*(?:PM\s*)?/i, '');
+            return nome.trim();
+        }
+
+        function encontrarUsuarioPorNome(lista, nomeDigitado) {
+            const alvo = normalizarNomePolicial(nomeDigitado).toLowerCase();
+            return lista.find(u => {
+                const nome = normalizarNomePolicial(u.nome || '').toLowerCase();
+                return nome === alvo;
+            }) || null;
+        }
+
         // LÓGICA DE LOGIN (SEGUNDO ACESSO EM DIANTE)
         async function executarLogin(event) {
             event.preventDefault();
@@ -341,16 +383,14 @@
             const senhaPessoal = document.getElementById('senha-login-pessoal').value;
 
             if (!entrada || !senhaPessoal) {
-                alert("⚠️ Informe sua patente/nome e sua senha pessoal.");
+                alert("⚠️ Informe seu nome e sua senha pessoal.");
                 return;
             }
 
             const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
             const bancoGeral = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
 
-            const usuarioEncontrado = usuarios.find(u =>
-                String(u.nome || '').trim().toLowerCase() === entrada.toLowerCase()
-            );
+            const usuarioEncontrado = encontrarUsuarioPorNome(usuarios, entrada);
 
             if (!usuarioEncontrado) {
                 alert(`❌ ERRO: O usuário "${entrada}" não consta no sistema.`);
@@ -404,19 +444,21 @@
                 return;
             }
 
-            localStorage.setItem('usuarioLogado', usuarioEncontrado.nome);
+            const nomeCanonico = normalizarNomePolicial(usuarioEncontrado.nome);
+            localStorage.setItem('usuarioLogado', nomeCanonico);
             localStorage.setItem('idLogado', usuarioEncontrado.id);
 
             const cadastroHierarquia = bancoGeral.find(u =>
-                String(u.usuario || '').trim().toLowerCase() === entrada.toLowerCase()
+                String(u.id) === String(usuarioEncontrado.id) ||
+                normalizarNomePolicial(u.usuario || u.nome).toLowerCase() === nomeCanonico.toLowerCase()
             );
             const cargoReal = cadastroHierarquia
-                ? cadastroHierarquia.cargo
-                : (usuarioEncontrado.estagio === 'sim' ? 'estagio' : 'membro-comum');
+                ? (cadastroHierarquia.cargo || cadastroHierarquia.patente)
+                : (usuarioEncontrado.patente || (usuarioEncontrado.estagio === 'sim' ? 'estagio' : 'membro-comum'));
 
             localStorage.setItem('cargoUsuario', cargoReal);
 
-            alert(`🔓 LOGIN AUTORIZADO!\nBem-vindo de volta, ${usuarioEncontrado.nome}.`);
+            alert(`🔓 LOGIN AUTORIZADO!\nBem-vindo de volta, ${nomeCanonico}.`);
             window.location.href = "painel.html";
         }
 
@@ -431,11 +473,14 @@
             }
 
             const nome = document.getElementById('nome-cadastro').value.trim();
+            const patenteSelecionada = document.getElementById('patente-cadastro').value.trim();
             const id = document.getElementById('id-cadastro').value.trim();
             const estagio = document.querySelector('input[name="estagio"]:checked').value;
             const senhaBatalhao = document.getElementById('senha-cadastro-batalhao').value.trim();
             const senhaPessoal = document.getElementById('senha-pessoal-cadastro').value;
             const senhaPessoalConfirmacao = document.getElementById('senha-pessoal-confirmacao').value;
+            const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
+            const bancoUsuariosGerais = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
 
             // MODO RECUPERAÇÃO: atualiza somente a senha pessoal de um cadastro existente.
             // A senha do batalhão continua sendo usada como confirmação de autorização.
@@ -451,12 +496,12 @@
                 }
 
                 const usuarioExistente = usuarios.find(u =>
-                    String(u.nome || '').trim().toLowerCase() === nome.toLowerCase() &&
-                    String(u.id || '') === String(id)
+                    String(u.id || '') === String(id) &&
+                    normalizarNomePolicial(u.nome || '').toLowerCase() === normalizarNomePolicial(nome).toLowerCase()
                 );
 
                 if (!usuarioExistente) {
-                    alert("❌ CADASTRO NÃO LOCALIZADO. Confira a patente/nome e o ID do jogo.");
+                    alert("❌ CADASTRO NÃO LOCALIZADO. Confira o nome e o ID do jogo.");
                     return;
                 }
 
@@ -479,7 +524,7 @@
                 // Recoloca o nome no login para facilitar o acesso após a recuperação.
                 document.getElementById('usuario-login').value = nome;
 
-                alert("✅ SENHA PESSOAL ATUALIZADA!\n\nAgora você pode entrar normalmente usando seu nome/patente e a nova senha pessoal.");
+                alert("✅ SENHA PESSOAL ATUALIZADA!\n\nAgora você pode entrar normalmente usando seu nome e a nova senha pessoal.");
                 return;
             }
 
@@ -493,29 +538,31 @@
                 return;
             }
 
-            const nomeMinusculo = nome.toLowerCase();
-            let cargoDefinido = "membro-comum";
+            let cargoDefinido = patenteSelecionada;
+            const patentesAltoComando = ['MAJOR','TENENTE CORONEL','CORONEL','COMANDO GERAL','SUB COMANDO GERAL'];
+
+            if (!patenteSelecionada) {
+                alert("❌ Selecione a patente do policial.");
+                return;
+            }
 
             // A senha do batalhão continua sendo a chave de homologação do cadastro.
             if (senhaBatalhao === "altocomando") {
-                if (nomeMinusculo.includes("tenente-coronel") || nomeMinusculo.includes("tenentecoronel") || nomeMinusculo.includes("tenente coronel")) {
-                    cargoDefinido = "tenente-coronel";
-                } else if (nomeMinusculo.includes("coronel")) {
-                    cargoDefinido = "coronel";
-                } else {
-                    cargoDefinido = "major";
+                if (!patentesAltoComando.includes(patenteSelecionada)) {
+                    alert("❌ A senha ALTO COMANDO exige uma patente do Alto Comando.");
+                    return;
                 }
             } else if (senhaBatalhao === "membros") {
-                cargoDefinido = estagio === 'sim' ? 'estagio' : 'membro-comum';
+                if (patentesAltoComando.includes(patenteSelecionada)) {
+                    alert("❌ Um cadastro de membro não pode utilizar uma patente do Alto Comando.");
+                    return;
+                }
             } else {
                 alert("❌ ACESSO NEGADO:\nA senha do batalhão está incorreta!");
                 return;
             }
 
-            const usuarios = JSON.parse(localStorage.getItem('usuariosBPE')) || [];
-            const bancoUsuariosGerais = JSON.parse(localStorage.getItem('bancoUsuariosBPE')) || [];
-
-            if (usuarios.some(u => String(u.nome || '').toLowerCase() === nome.toLowerCase())) {
+            if (usuarios.some(u => normalizarNomePolicial(u.nome || '').toLowerCase() === normalizarNomePolicial(nome).toLowerCase())) {
                 alert(`⚠️ ATENÇÃO: O policial "${nome}" já possui um cadastro ativo no sistema.\n\nSe este é o seu cadastro antigo, ele precisa receber uma senha pessoal antes do primeiro login com a nova segurança.`);
                 return;
             }
@@ -524,7 +571,8 @@
 
             // A senha pessoal NUNCA é salva em texto puro.
             usuarios.push({
-                nome,
+                nome: normalizarNomePolicial(nome),
+                patente: patenteSelecionada,
                 id,
                 estagio,
                 senhaPessoalHash,
@@ -536,22 +584,24 @@
 
             bancoUsuariosGerais.push({
                 id: id,
-                usuario: nome,
-                patente: cargoDefinido.toUpperCase(),
-                cargo: cargoDefinido
+                usuario: normalizarNomePolicial(nome),
+                nome: normalizarNomePolicial(nome),
+                patente: patenteSelecionada,
+                cargo: cargoDefinido,
+                situacaoEstagio: estagio
             });
 
             localStorage.setItem('bancoUsuariosBPE', JSON.stringify(bancoUsuariosGerais));
             await bpeSalvarNuvem('bancoUsuariosBPE', bancoUsuariosGerais);
 
-            localStorage.setItem('usuarioLogado', nome);
+            localStorage.setItem('usuarioLogado', normalizarNomePolicial(nome));
             localStorage.setItem('idLogado', id);
             localStorage.setItem('cargoUsuario', cargoDefinido);
 
             if (senhaBatalhao === "altocomando") {
                 alert(`👑 ALTO COMANDO HOMOLOGADO:\nOficial: ${nome}\n\nSua senha pessoal foi registrada. Entrando no painel operacional com poder supremo...`);
             } else {
-                alert(`✅ CADASTRO HOMOLOGADO:\nPolicial: ${nome}\nID: ${id}\n\nSua senha pessoal foi registrada. Entrando no painel de patrulha...`);
+                alert(`✅ CADASTRO HOMOLOGADO:\nPolicial: ${patenteSelecionada} PM ${normalizarNomePolicial(nome)}\nID: ${id}\n\nSua senha pessoal foi registrada. Entrando no painel de patrulha...`);
             }
 
             window.location.href = "painel.html";
