@@ -39,13 +39,20 @@
         .access-lock { max-width:760px;margin:60px auto; text-align:center; }
         .access-lock .lock-icon { font-size:58px;margin-bottom:10px; }
         .site-credit { position:fixed; right:12px; bottom:8px; color:#666;font-size:10px;z-index:10;pointer-events:none; }
+        .btn-retornar-cadastro {
+            position:fixed; top:12px; right:16px; z-index:10000;
+            background:#2c2c2e; color:#fff; border:1px solid #555;
+            padding:9px 14px; border-radius:7px; font-weight:800;
+            cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.35);
+        }
+        .btn-retornar-cadastro:hover { border-color:#ffcc00; color:#ffcc00; }
         .dados-pessoais-card { max-width:760px; margin:25px auto; }
         .dados-pessoais-aviso { background:rgba(255,204,0,.08); border:1px solid rgba(255,204,0,.3); color:#d7d7d7; padding:14px; border-radius:8px; line-height:1.6; margin-bottom:20px; }
         .dados-pessoais-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
         .dados-pessoais-grid label { display:block; color:#aeaea3; font-size:13px; margin-bottom:6px; }
         .dados-pessoais-grid input { width:100%; box-sizing:border-box; padding:12px; background:#2c2c2e; border:1px solid #3a3a3c; color:#fff; border-radius:6px; outline:none; }
         .dados-pessoais-grid input:focus { border-color:#ffcc00; }
-        @media (max-width:700px) { .dados-pessoais-grid { grid-template-columns:1fr; } }
+        @media (max-width:700px) { .dados-pessoais-grid { grid-template-columns:1fr; } .btn-retornar-cadastro { top:8px; right:8px; padding:8px 10px; font-size:11px; } }
 
         /* ===== BPE TÁTICO — ROLAGEM CORRIGIDA ===== */
         html, body { height:100%; min-height:100%; }
@@ -154,6 +161,7 @@
 
         <!-- CONTEÚDO PRINCIPAL (MURAL CENTRAL DINÂMICO E ISOLADO) -->
         <main class="main-content">
+            <button class="btn-retornar-cadastro" type="button" onclick="irParaCadastro()">↩️ Retornar</button>
             <!-- ====== PORTA DE ACESSO ====== -->
             <div id="content-acesso" class="aba-conteudo hidden">
                 <div class="card access-lock">
@@ -312,10 +320,19 @@
                     <div class="card">
                         <div class="card-header-blue">📸 INSTANTÂNEO: SOLTE O PRINT DO INVENTÁRIO ABAIXO</div>
                         <div class="ponto-body">
-                            <div class="upload-dropzone" id="dropzone" onclick="document.getElementById('file-print').click()">
+                            <div class="upload-dropzone" id="dropzone" onclick="document.getElementById('file-print').click()" ondragover="event.preventDefault()" ondrop="event.preventDefault(); Array.from(event.dataTransfer.files || []).forEach(processarImagemApreensao)">
                                 <span class="upload-icon">📷</span>
-                                <p>Clique aqui ou arraste o print do inventário do jogador</p>
-                                <input type="file" id="file-print" accept="image/*" style="display: none;" onchange="simularLeituraOCR(this)">
+                                <p><strong>Clique, arraste ou use CTRL+V</strong></p>
+                                <p>Cole diretamente um print do inventário nesta área. Você pode adicionar vários prints antes de enviar.</p>
+                                <input type="file" id="file-print" accept="image/*" multiple style="display: none;" onchange="adicionarPrintsApreensao(this)">
+                            </div>
+                            <div class="card" style="margin-top:18px;">
+                                <div class="card-header-gray">📋 PRINTS AGUARDANDO ENVIO</div>
+                                <div id="fila-prints-apreensao" style="padding:10px 0;">
+                                    <div class="sem-registro">Nenhum print aguardando envio.</div>
+                                </div>
+                                <button id="btn-enviar-apreensoes" type="button" class="btn-ponto iniciar" style="width:100%;margin-top:15px;" onclick="enviarApreensoesPendentes()" disabled>📤 ENVIAR APREENSÕES</button>
+                                <p style="margin-top:12px;color:#aaa;font-size:13px;">O ranking azul conta cada tipo de objeto identificado no print (ex.: 2 maconhas + 3 armas = 2 objetos). O montante amarelo soma as quantidades dos materiais.</p>
                             </div>
                         </div>
                     </div>
@@ -977,19 +994,6 @@
                     return patenteSalva || patenteCargo || patenteNome || "SOLDADO 2ª CLASSE";
                 }
 
-                function obterNomeSemPatente(pm) {
-                    if (pm?.nome && !String(pm.nome).match(/PM\b/i)) return String(pm.nome).trim();
-                    const texto = String(pm?.usuario || pm?.nome || "POLICIAL").trim();
-                    const match = texto.match(/^.*?\s+PM\s+(.+)$/i);
-                    if (match) return match[1].trim();
-                    const patente = obterPatenteDoPolicial(pm);
-                    return texto.replace(new RegExp('^' + patente.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i'), '').replace(/^PM\s+/i, '').trim();
-                }
-
-                function montarNomeExibicao(pm) {
-                    return `${obterPatenteDoPolicial(pm)} PM ${obterNomeSemPatente(pm)}`.trim();
-                }
-
                 function montarNomeComPatente(pm, novaPatente) {
                     const nomeAtual = String(pm.usuario || pm.nome || "POLICIAL").trim();
                     const match = nomeAtual.match(/^.+?\s+PM\b\s*(.*)$/i);
@@ -1191,15 +1195,13 @@
                     const pm = lista.find(x => String(x.id) === idAtual || normalizarTexto(x.usuario || x.nome) === nomeAtual);
                     if (!pm) return null;
 
-                    const nomeBanco = obterNomeSemPatente(pm);
-                    const exibicaoBanco = montarNomeExibicao(pm);
+                    const nomeBanco = String(pm.usuario || pm.nome || '').trim();
                     if (nomeBanco) {
-                        // O login continua sendo pelo nome. A patente é apenas um dado dinâmico do efetivo.
                         localStorage.setItem('usuarioLogado', nomeBanco);
                         const userDisplay = document.getElementById('user-display');
                         const pontoNome = document.getElementById('ponto-nome');
-                        if (userDisplay) userDisplay.textContent = exibicaoBanco;
-                        if (pontoNome) pontoNome.textContent = exibicaoBanco;
+                        if (userDisplay) userDisplay.textContent = nomeBanco;
+                        if (pontoNome) pontoNome.textContent = nomeBanco;
                     }
                     localStorage.setItem('idLogado', String(pm.id));
                     const pontoId = document.getElementById('ponto-id');
@@ -1284,9 +1286,9 @@
                         if (!confirm(`Promover ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
                         pm.patente = novaPatente;
                         pm.cargo = novaPatente;
-                        pm.nome = obterNomeSemPatente(pm);
-                        pm.usuario = pm.nome;
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} promoveu ${pm.nome} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
+                        pm.usuario = montarNomeComPatente(pm, novaPatente);
+                        pm.nome = pm.usuario;
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} promoveu ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
                     }
 
                     if (acao === 'rebaixar') {
@@ -1298,9 +1300,9 @@
                         if (!confirm(`Rebaixar ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
                         pm.patente = novaPatente;
                         pm.cargo = novaPatente;
-                        pm.nome = obterNomeSemPatente(pm);
-                        pm.usuario = pm.nome;
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} rebaixou ${pm.nome} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
+                        pm.usuario = montarNomeComPatente(pm, novaPatente);
+                        pm.nome = pm.usuario;
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} rebaixou ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
                     }
 
                     if (acao === 'estagio') {
@@ -1514,7 +1516,7 @@
                         const grupo = obterGrupoPatente(patente);
 
                         const idPolicial = String(pm.id || "0000");
-                        const nomeCompleto = montarNomeExibicao(pm);
+                        const nomeCompleto = String(pm.usuario || pm.nome || "POLICIAL").trim();
 
                         const aus = bancoAusencias.find(a => {
                             if (String(a.policialId) !== idPolicial) return false;
@@ -1663,32 +1665,205 @@
                     return `${Math.floor(seg/3600).toString().padStart(2,'0')}:${Math.floor((seg%3600)/60).toString().padStart(2,'0')}:${(seg%60).toString().padStart(2,'0')}`;
                 }
 
-                // APREENSÕES / OCR
-                function simularLeituraOCR(input) {
-                    if (!input.files || !input.files[0] || typeof Tesseract === 'undefined') {
-                        alert("Não foi possível iniciar o OCR.");
+                // ==============================
+                // APREENSÕES / OCR + ÁREA DE COLAGEM
+                // ==============================
+                let printsApreensaoPendentes = [];
+                let resultadosApreensaoPendentes = [];
+
+                function normalizarItemOCR(nome){
+                    return String(nome || '')
+                        .replace(/\s+/g,' ')
+                        .replace(/^[-:•|]+|[-:•|]+$/g,'')
+                        .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ]+$/g,'')
+                        .trim();
+                }
+
+                function nomeItemPareceValido(item){
+                    const texto = normalizarItemOCR(item);
+                    if(texto.length < 3 || !/[A-Za-zÀ-ÿ]/.test(texto)) return false;
+
+                    // Não há nenhum material fixado/hardcoded aqui.
+                    // O OCR aceita qualquer nome que apareça no print e venha acompanhado de quantidade.
+                    const ignorados = /^(id|total|quantidade|qtd|x|item|invent[aá]rio|peso|valor|pre[cç]o|dinheiro|saldo|capacidade|slot|espa[cç]o|muni[cç][aã]o)$/i;
+                    if(ignorados.test(texto)) return false;
+
+                    // Evita capturar frases de interface como se fossem itens.
+                    if(/^(abrir|fechar|usar|descartar|equipar|voltar|sair|confirmar|cancelar|invent[aá]rio)$/i.test(texto)) return false;
+                    return true;
+                }
+
+                function adicionarResultadoMaterial(lista, item, qtd){
+                    item = normalizarItemOCR(item);
+                    qtd = parseInt(qtd,10);
+                    if(!nomeItemPareceValido(item) || !Number.isFinite(qtd) || qtd <= 0 || qtd > 100000) return;
+                    lista.push({item, qtd});
+                }
+
+                function extrairMateriaisDoOCR(texto){
+                    const resultados = [];
+                    const original = String(texto || '').replace(/\r/g,'');
+                    const linhas = original.split('\n').map(l => l.trim()).filter(Boolean);
+
+                    // 1) Primeiro procura pares ITEM + QUANTIDADE no texto inteiro.
+                    // Aceita x20, ×20, "20 x", "20 unidades", etc.
+                    const padroes = [
+                        /([^\n|]{2,80}?)\s*[x×]\s*(\d{1,6})\b/gi,
+                        /\b(\d{1,6})\s*[x×]\s*([^\n|]{2,80}?)(?=\s{2,}|$)/gi,
+                        /([^\n|]{2,80}?)\s+\b(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?\b/gi,
+                        /\b(\d{1,6})\s+(?:un(?:idade)?s?|und)\s+([^\n|]{2,80})/gi
+                    ];
+
+                    for(const regex of padroes){
+                        let m;
+                        while((m = regex.exec(original)) !== null){
+                            if(/^\d/.test(m[1])) adicionarResultadoMaterial(resultados, m[2], m[1]);
+                            else adicionarResultadoMaterial(resultados, m[1], m[2]);
+                        }
+                    }
+
+                    // 2) Fallback linha a linha para inventários onde o OCR separa nome e quantidade.
+                    linhas.forEach((linha, indice) => {
+                        let m;
+
+                        m = linha.match(/^(.+?)\s*[x×]\s*(\d{1,6})\s*(?:un(?:idade)?s?|und)?$/i);
+                        if(m){ adicionarResultadoMaterial(resultados, m[1], m[2]); return; }
+
+                        m = linha.match(/^(\d{1,6})\s*[x×]\s*(.+)$/i);
+                        if(m){ adicionarResultadoMaterial(resultados, m[2], m[1]); return; }
+
+                        m = linha.match(/^(.+?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und)?$/i);
+                        if(m){ adicionarResultadoMaterial(resultados, m[1], m[2]); return; }
+
+                        m = linha.match(/^(\d{1,6})\s+(?:un(?:idade)?s?|und)\s+(.+)$/i);
+                        if(m){ adicionarResultadoMaterial(resultados, m[2], m[1]); return; }
+
+                        // Alguns inventários exibem o nome em uma linha e "x20" na seguinte.
+                        if(indice < linhas.length - 1 && /^x?\s*\d{1,6}$/i.test(linha)){
+                            const qtd = linha.match(/\d{1,6}/)?.[0];
+                            adicionarResultadoMaterial(resultados, linhas[indice + 1], qtd);
+                        }
+                    });
+
+                    // Junta materiais repetidos dentro do MESMO print.
+                    const agrupado = {};
+                    resultados.forEach(r => {
+                        const chave = normalizarTexto(r.item);
+                        if(!agrupado[chave]) agrupado[chave] = {item:r.item, qtd:0};
+                        agrupado[chave].qtd += r.qtd;
+                    });
+                    return Object.values(agrupado);
+                }
+
+                function atualizarFilaApreensoes(){
+                    const box = document.getElementById('fila-prints-apreensao');
+                    const btn = document.getElementById('btn-enviar-apreensoes');
+                    if(!box) return;
+                    if(!printsApreensaoPendentes.length){
+                        box.innerHTML = '<div class="sem-registro">Nenhum print aguardando envio.</div>';
+                    } else {
+                        box.innerHTML = printsApreensaoPendentes.map((p,i)=>
+                            `<div style="padding:10px 12px;border-bottom:1px solid #333;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+                                <span>📸 Print ${i+1} — ${p.resultados.length ? p.resultados.map(r=>`${r.item}: ${r.qtd}`).join(' • ') : 'nenhum material identificado automaticamente'}</span>
+                                <button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button>
+                            </div>`
+                        ).join('');
+                    }
+                    if(btn) btn.disabled = !printsApreensaoPendentes.length;
+                }
+
+                function removerPrintApreensao(indice){
+                    printsApreensaoPendentes.splice(indice,1);
+                    atualizarFilaApreensoes();
+                }
+
+                function processarImagemApreensao(file){
+                    if(!file || !file.type || !file.type.startsWith('image/')) return;
+                    if(typeof Tesseract === 'undefined'){
+                        alert('❌ O leitor OCR não está disponível nesta página.');
                         return;
                     }
-                    alert("🤖 Escaneando print do inventário...");
-                    Tesseract.recognize(input.files[0], 'por+eng').then(({data:{text}})=>{
-                        const linhas=text.split('\n');
-                        const rP=lerJSON('rankingApreensoesBPE',{});
-                        const rM=lerJSON('topMateriaisBPE',{});
-                        const pChave=`${localStorage.getItem('usuarioLogado')} (ID: ${localStorage.getItem('idLogado')})`;
-                        if(!rP[pChave])rP[pChave]=0;
-                        linhas.forEach(l=>{
-                            const num=l.match(/\d+/);
-                            if(num){
-                                const qtd=parseInt(num[0]);
-                                const item=l.replace(/\d+/g,'').replace(/[:x\-_\*]/g,'').trim();
-                                if(item.length>2 && qtd>0){rP[pChave]+=qtd;rM[item]=(rM[item]||0)+qtd;}
-                            }
+
+                    const numero = printsApreensaoPendentes.length + 1;
+                    alert(`🤖 Lendo todos os itens do print ${numero} do inventário...`);
+
+                    Tesseract.recognize(file, 'por+eng').then(({data:{text}})=>{
+                        const resultados = extrairMateriaisDoOCR(text);
+                        printsApreensaoPendentes.push({file, resultados, textoOCR:text});
+                        atualizarFilaApreensoes();
+
+                        if(resultados.length){
+                            alert(`✅ Print ${numero} lido. Foram identificados ${resultados.length} tipo(s) de material:\n\n${resultados.map(r=>`${r.item}: ${r.qtd}`).join('\n')}\n\nO print ficou aguardando envio.`);
+                        } else {
+                            alert(`⚠️ Print ${numero} foi recebido, mas o OCR não conseguiu identificar automaticamente os itens e quantidades.\n\nO print continua na fila para envio.`);
+                        }
+                    }).catch(()=>alert('❌ Não foi possível ler o print.'));
+                }
+
+                function adicionarPrintsApreensao(input){
+                    Array.from(input.files || []).forEach(processarImagemApreensao);
+                    input.value = '';
+                }
+
+                function enviarApreensoesPendentes(){
+                    if(!printsApreensaoPendentes.length){
+                        alert('⚠️ Adicione pelo menos um print antes de enviar.');
+                        return;
+                    }
+
+                    const rP = lerJSON('rankingApreensoesBPE',{});
+                    const rM = lerJSON('topMateriaisBPE',{});
+                    const pChave = `${localStorage.getItem('usuarioLogado')} (ID: ${localStorage.getItem('idLogado')})`;
+
+                    // AZUL: conta os TIPOS DE OBJETOS identificados em cada print.
+                    // Ex.: 1 print com 2 MACONHAS + 3 ARMAS = 2 objetos no ranking.
+                    // A quantidade de unidades não altera o ranking azul.
+                    // Se outro print tiver 1 ARMA = +1 objeto. Total = 3 objetos.
+                    const objetosIdentificados = printsApreensaoPendentes.reduce((total, print) => {
+                        return total + print.resultados.length;
+                    }, 0);
+                    rP[pChave] = (rP[pChave] || 0) + objetosIdentificados;
+
+                    // AMARELO: lê TODOS os itens identificados em TODOS os prints.
+                    // Ex.: um print com 20 maconhas + 2 armas + 15 munições alimenta os 3 materiais.
+                    printsApreensaoPendentes.forEach(print => {
+                        print.resultados.forEach(r => {
+                            const chaveExistente = Object.keys(rM).find(k => normalizarTexto(k) === normalizarTexto(r.item));
+                            const chave = chaveExistente || r.item;
+                            rM[chave] = (rM[chave] || 0) + r.qtd;
                         });
-                        salvarJSON('rankingApreensoesBPE',rP);
-                        salvarJSON('topMateriaisBPE',rM);
-                        atualizarTabelasGerais();
-                        navegarAba('rankings-aba');
-                    }).catch(()=>alert("❌ Não foi possível ler o print."));
+                    });
+
+                    salvarJSON('rankingApreensoesBPE',rP);
+                    salvarJSON('topMateriaisBPE',rM);
+
+                    const totalPrints = printsApreensaoPendentes.length;
+                    const totalTipos = objetosIdentificados;
+                    const totalUnidades = printsApreensaoPendentes.reduce((s,p)=>s+p.resultados.reduce((t,r)=>t+r.qtd,0),0);
+                    printsApreensaoPendentes = [];
+                    resultadosApreensaoPendentes = [];
+                    atualizarFilaApreensoes();
+                    atualizarTabelasGerais();
+
+                    alert(`✅ ${totalPrints} print(s) enviado(s).\n\n🔵 ${totalTipos} objeto(s) contabilizado(s) no ranking individual.\n📦 ${totalUnidades} unidade(s) de material acumulada(s) no montante geral.`);
+                    navegarAba('rankings-aba');
+                }
+
+                // Ctrl+V / colar imagem diretamente no menu de apreensões.
+                document.addEventListener('paste', function(event){
+                    const aba = document.getElementById('content-apreensoes');
+                    if(!aba || aba.classList.contains('hidden')) return;
+                    const itens = Array.from(event.clipboardData?.items || []);
+                    const imagem = itens.find(item => item.type && item.type.startsWith('image/'));
+                    if(!imagem) return;
+                    event.preventDefault();
+                    const file = imagem.getAsFile();
+                    if(file) processarImagemApreensao(file);
+                });
+
+                // Compatibilidade com chamadas antigas.
+                function simularLeituraOCR(input){
+                    adicionarPrintsApreensao(input);
                 }
 
                 // RELATÓRIOS
@@ -1881,11 +2056,21 @@
                     box.innerHTML = itens.map(([k,d]) => `<button class="admin-delete-all" onclick="apagarTudoDoMenu('${k}','${d}')">🗑️ APAGAR TUDO — ${d.toUpperCase()}</button>`).join('');
                 }
 
-                function excluirDestaqueSemana() {
+                async function excluirDestaqueSemana() {
                     if (!podeExcluirConteudo()) { alert('🔒 Exclusão não autorizada.'); return; }
                     if (!confirm('Excluir o Policial da Semana?')) return;
 
-                    salvarJSON('bpePolicialDestaque', null);
+                    // Primeiro grava localmente e, em seguida, força a mesma exclusão no Supabase.
+                    // Isso evita que uma sincronização antiga restaure o destaque alguns segundos depois.
+                    localStorage.setItem('bpePolicialDestaque', JSON.stringify(null));
+                    try {
+                        if (typeof bpeSalvarNuvem === 'function') {
+                            await bpeSalvarNuvem('bpePolicialDestaque', null);
+                        }
+                    } catch (e) {
+                        console.error('[BPE] Falha ao excluir destaque na nuvem:', e);
+                    }
+                    renderizarBoletinsECommunicados();
 
                     // Limpa também qualquer imagem/preview ainda carregado no formulário.
                     const arquivo = document.getElementById('adm-destaque-foto-arquivo');
@@ -2113,11 +2298,9 @@
                 }
 
                 function irParaCadastro(){
-                    // Volta para o cadastro/login no mesmo diretório do GitHub Pages.
-                    const caminhoAtual = window.location.pathname;
-                    const diretorio = caminhoAtual.substring(0, caminhoAtual.lastIndexOf('/') + 1);
-                    const destino = window.location.origin + diretorio + 'index.html';
-                    window.location.replace(destino);
+                    // Usa o endereço relativo ao próprio painel para funcionar no GitHub Pages.
+                    const destino = new URL('./cadastro.html', window.location.href).href;
+                    window.location.assign(destino);
                 }
 
                 function fazerLogout(){
