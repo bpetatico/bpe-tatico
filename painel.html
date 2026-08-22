@@ -100,9 +100,16 @@
             min-height:max-content !important;
             padding-bottom:70px !important;
         }
-        /* Segurança: toda aba sem a classe hidden deve aparecer. */
-        .aba-conteudo:not(.hidden) { display:block !important; }
     </style>
+<style>
+        /* CORREÇÃO DEFINITIVA DAS ABAS: somente a aba ativa fica visível. */
+        .main-content .aba-conteudo.hidden { display:none !important; }
+        .main-content .aba-conteudo:not(.hidden) { display:block !important; visibility:visible !important; opacity:1 !important; }
+        .main-content .aba-conteudo { box-sizing:border-box; min-height:100%; }
+        #content-apreensoes .upload-dropzone { min-height:120px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; }
+        #fila-prints-apreensao textarea { display:block !important; visibility:visible !important; opacity:1 !important; }
+        #fila-prints-apreensao img { max-width:100%; height:auto; }
+</style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -332,6 +339,7 @@
                                 <p style="margin-top:12px;color:#aaa;font-size:13px;">Após anexar cada print, o campo <strong>Materiais apreendidos</strong> aparece imediatamente para você informar as quantidades. Você pode adicionar vários prints na mesma postagem. O print fica visível para conferência e também é arquivado para fiscalização posterior.</p>
                             </div>
                             <div id="historico-apreensoes-fiscalizacao" style="margin-top:18px;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1190,44 +1198,55 @@
                         return;
                     }
 
-                    // Troca de abas: força explicitamente a aba escolhida a ficar visível.
-                    // Isso evita que uma regra antiga de CSS ou um estilo inline deixe o conteúdo em branco.
+                    // Navegação robusta: controla o display diretamente para impedir que
+                    // regras antigas de CSS/.hidden deixem a aba selecionada preta/vazia.
                     document.querySelectorAll('.aba-conteudo').forEach(a => {
                         a.classList.add('hidden');
                         a.style.setProperty('display', 'none', 'important');
+                        a.setAttribute('aria-hidden', 'true');
                     });
                     document.querySelectorAll('.sidebar-menu .menu-btn').forEach(b => b.classList.remove('active'));
 
                     const alvo = document.getElementById(`content-${abaNome}`);
-                    if (alvo) {
-                        alvo.classList.remove('hidden');
-                        alvo.style.setProperty('display', 'block', 'important');
-                        const principal = document.querySelector('.main-content');
-                        if (principal) principal.scrollTop = 0;
-                    } else {
+                    if (!alvo) {
                         console.error('[BPE] Aba não encontrada:', abaNome);
+                        return;
                     }
+                    alvo.classList.remove('hidden');
+                    alvo.style.setProperty('display', 'block', 'important');
+                    alvo.setAttribute('aria-hidden', 'false');
 
                     const btn = document.getElementById(`btn-menu-${abaNome}`);
                     if (btn) btn.classList.add('active');
 
-                    if (abaNome === 'hierarquia') renderizarHierarquiaGeral();
-                    if (abaNome === 'dados') carregarDadosPessoais();
-                    if (abaNome === 'coronel') {
-                        renderizarBoletinsECommunicados();
-                        renderizarSolicitacoesAcesso();
-                        renderizarPainelApagarTudo();
-                        renderizarMuralHerois();
-                        renderizarAdminHerois();
-                        requestAnimationFrame(() => {
-                            const principal = document.querySelector('.main-content');
-                            if (principal) principal.scrollTop = 0;
-                        });
-                    }
-                    if (abaNome === 'historia') renderizarHistoriaBPE();
-                    if (abaNome === 'necroteca') renderizarNecroteca();
-                
-                    if (abaNome === 'apreensoes') renderizarHistoricoApreensoes();}
+                    // Renderiza também as áreas dinâmicas de cada menu.
+                    const renderizadores = {
+                        inicio: renderizarBoletinsECommunicados,
+                        herois: renderizarMuralHerois,
+                        'rankings-aba': atualizarTabelasGerais,
+                        ponto: atualizarTabelasGerais,
+                        apreensoes: () => { renderizarHistoricoApreensoes(); atualizarTabelasGerais(); atualizarFilaApreensoes(); },
+                        relatorios: renderizarMuralRSO,
+                        ausencias: () => { renderizarMuralAusencias(); verificarStatusAusenciaUsuario(); },
+                        historia: renderizarHistoriaBPE,
+                        necroteca: renderizarNecroteca,
+                        hierarquia: () => { renderizarHierarquiaGeral(); atualizarTagEstagioUsuario(); },
+                        dados: carregarDadosPessoais,
+                        coronel: () => {
+                            renderizarBoletinsECommunicados();
+                            renderizarSolicitacoesAcesso();
+                            renderizarPainelApagarTudo();
+                            renderizarMuralHerois();
+                            renderizarAdminHerois();
+                        }
+                    };
+                    try { renderizadores[abaNome]?.(); } catch (e) { console.error('[BPE] Erro ao renderizar aba', abaNome, e); }
+
+                    requestAnimationFrame(() => {
+                        const principal = document.querySelector('.main-content');
+                        if (principal) principal.scrollTop = 0;
+                    });
+                }
 
                 function verificarAcessoPainelAdministrativoGeral() {
                     const btnAdmin = document.getElementById('btn-admin');
@@ -1972,6 +1991,9 @@ function removerPrintApreensao(indice){
                     if(semMaterial>=0){ alert(`⚠️ Informe os materiais apreendidos no Print ${semMaterial+1}.\n\nExemplo: 20 maconha, 10 maconhas, 1 pistola.`); document.getElementById(`materiais-print-${semMaterial}`)?.focus(); return; }
                     const rP=lerJSON('rankingApreensoesBPE',{}), rM=lerJSON('topMateriaisBPE',{});
                     const pChave=`${localStorage.getItem('usuarioLogado')} (ID: ${localStorage.getItem('idLogado')})`;
+                    // Ranking individual: cada material/item identificado em cada print vale 1 objeto.
+                    // A quantidade (ex.: 20 maconha) NÃO multiplica o ranking.
+                    // Ex.: 2 maconha + 3 armas no mesmo print = 2 objetos; outro print com 1 arma = +1.
                     const objetosIdentificados=printsApreensaoPendentes.reduce((t,p)=>t+(p.materiais||[]).length,0);
                     rP[pChave]=(rP[pChave]||0)+objetosIdentificados;
                     printsApreensaoPendentes.forEach(p=>(p.materiais||[]).forEach(m=>{const ex=Object.keys(rM).find(k=>normalizarMaterialDigitado(k)===m.chave);const k=ex||m.item;rM[k]=(rM[k]||0)+m.qtd;}));
