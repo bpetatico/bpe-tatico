@@ -977,6 +977,19 @@
                     return patenteSalva || patenteCargo || patenteNome || "SOLDADO 2ª CLASSE";
                 }
 
+                function obterNomeSemPatente(pm) {
+                    if (pm?.nome && !String(pm.nome).match(/PM\b/i)) return String(pm.nome).trim();
+                    const texto = String(pm?.usuario || pm?.nome || "POLICIAL").trim();
+                    const match = texto.match(/^.*?\s+PM\s+(.+)$/i);
+                    if (match) return match[1].trim();
+                    const patente = obterPatenteDoPolicial(pm);
+                    return texto.replace(new RegExp('^' + patente.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*', 'i'), '').replace(/^PM\s+/i, '').trim();
+                }
+
+                function montarNomeExibicao(pm) {
+                    return `${obterPatenteDoPolicial(pm)} PM ${obterNomeSemPatente(pm)}`.trim();
+                }
+
                 function montarNomeComPatente(pm, novaPatente) {
                     const nomeAtual = String(pm.usuario || pm.nome || "POLICIAL").trim();
                     const match = nomeAtual.match(/^.+?\s+PM\b\s*(.*)$/i);
@@ -1178,13 +1191,15 @@
                     const pm = lista.find(x => String(x.id) === idAtual || normalizarTexto(x.usuario || x.nome) === nomeAtual);
                     if (!pm) return null;
 
-                    const nomeBanco = String(pm.usuario || pm.nome || '').trim();
+                    const nomeBanco = obterNomeSemPatente(pm);
+                    const exibicaoBanco = montarNomeExibicao(pm);
                     if (nomeBanco) {
+                        // O login continua sendo pelo nome. A patente é apenas um dado dinâmico do efetivo.
                         localStorage.setItem('usuarioLogado', nomeBanco);
                         const userDisplay = document.getElementById('user-display');
                         const pontoNome = document.getElementById('ponto-nome');
-                        if (userDisplay) userDisplay.textContent = nomeBanco;
-                        if (pontoNome) pontoNome.textContent = nomeBanco;
+                        if (userDisplay) userDisplay.textContent = exibicaoBanco;
+                        if (pontoNome) pontoNome.textContent = exibicaoBanco;
                     }
                     localStorage.setItem('idLogado', String(pm.id));
                     const pontoId = document.getElementById('ponto-id');
@@ -1269,9 +1284,9 @@
                         if (!confirm(`Promover ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
                         pm.patente = novaPatente;
                         pm.cargo = novaPatente;
-                        pm.usuario = montarNomeComPatente(pm, novaPatente);
-                        pm.nome = pm.usuario;
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} promoveu ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
+                        pm.nome = obterNomeSemPatente(pm);
+                        pm.usuario = pm.nome;
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} promoveu ${pm.nome} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
                     }
 
                     if (acao === 'rebaixar') {
@@ -1283,9 +1298,9 @@
                         if (!confirm(`Rebaixar ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
                         pm.patente = novaPatente;
                         pm.cargo = novaPatente;
-                        pm.usuario = montarNomeComPatente(pm, novaPatente);
-                        pm.nome = pm.usuario;
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} rebaixou ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
+                        pm.nome = obterNomeSemPatente(pm);
+                        pm.usuario = pm.nome;
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} rebaixou ${pm.nome} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
                     }
 
                     if (acao === 'estagio') {
@@ -1499,7 +1514,7 @@
                         const grupo = obterGrupoPatente(patente);
 
                         const idPolicial = String(pm.id || "0000");
-                        const nomeCompleto = String(pm.usuario || pm.nome || "POLICIAL").trim();
+                        const nomeCompleto = montarNomeExibicao(pm);
 
                         const aus = bancoAusencias.find(a => {
                             if (String(a.policialId) !== idPolicial) return false;
@@ -2101,7 +2116,7 @@
                     // Volta para o cadastro/login no mesmo diretório do GitHub Pages.
                     const caminhoAtual = window.location.pathname;
                     const diretorio = caminhoAtual.substring(0, caminhoAtual.lastIndexOf('/') + 1);
-                    const destino = window.location.origin + diretorio + 'cadastro.html';
+                    const destino = window.location.origin + diretorio + 'index.html';
                     window.location.replace(destino);
                 }
 
