@@ -39,6 +39,20 @@
         .access-lock { max-width:760px;margin:60px auto; text-align:center; }
         .access-lock .lock-icon { font-size:58px;margin-bottom:10px; }
         .site-credit { position:fixed; right:12px; bottom:8px; color:#666;font-size:10px;z-index:10;pointer-events:none; }
+        .btn-retornar-cadastro {
+            position:fixed; top:12px; right:16px; z-index:10000;
+            background:#2c2c2e; color:#fff; border:1px solid #555;
+            padding:9px 14px; border-radius:7px; font-weight:800;
+            cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.35);
+        }
+        .btn-retornar-cadastro:hover { border-color:#ffcc00; color:#ffcc00; }
+        .dados-pessoais-card { max-width:760px; margin:25px auto; }
+        .dados-pessoais-aviso { background:rgba(255,204,0,.08); border:1px solid rgba(255,204,0,.3); color:#d7d7d7; padding:14px; border-radius:8px; line-height:1.6; margin-bottom:20px; }
+        .dados-pessoais-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        .dados-pessoais-grid label { display:block; color:#aeaea3; font-size:13px; margin-bottom:6px; }
+        .dados-pessoais-grid input { width:100%; box-sizing:border-box; padding:12px; background:#2c2c2e; border:1px solid #3a3a3c; color:#fff; border-radius:6px; outline:none; }
+        .dados-pessoais-grid input:focus { border-color:#ffcc00; }
+        @media (max-width:700px) { .dados-pessoais-grid { grid-template-columns:1fr; } .btn-retornar-cadastro { top:8px; right:8px; padding:8px 10px; font-size:11px; } }
 
         /* ===== BPE TÁTICO — ROLAGEM CORRIGIDA ===== */
         html, body { height:100%; min-height:100%; }
@@ -135,6 +149,7 @@
                 <button id="btn-menu-historia" class="menu-btn" onclick="navegarAba('historia')">📜 História do Batalhão</button>
                 <button id="btn-menu-necroteca" class="menu-btn" onclick="navegarAba('necroteca')">✝️ Necrotério / Memorial</button>
                 <button id="btn-menu-hierarquia" class="menu-btn" onclick="navegarAba('hierarquia')">🎖️ Hierarquia</button>
+                <button id="btn-menu-dados" class="menu-btn" onclick="navegarAba('dados')">🪪 Alteração de Dados</button>
             </nav>
 
             <div class="sidebar-footer">
@@ -146,6 +161,7 @@
 
         <!-- CONTEÚDO PRINCIPAL (MURAL CENTRAL DINÂMICO E ISOLADO) -->
         <main class="main-content">
+            <button class="btn-retornar-cadastro" type="button" onclick="irParaCadastro()">↩️ Retornar</button>
             <!-- ====== PORTA DE ACESSO ====== -->
             <div id="content-acesso" class="aba-conteudo hidden">
                 <div class="card access-lock">
@@ -470,6 +486,41 @@
                 </section>
             </div>
 
+            <!-- ====== ABA: ALTERAÇÃO DE DADOS ====== -->
+            <div id="content-dados" class="aba-conteudo hidden">
+                <header class="main-header">
+                    <h1>ALTERAÇÃO DE DADOS DO POLICIAL</h1>
+                    <div class="date-today">ATUALIZAÇÃO DO CADASTRO</div>
+                </header>
+
+                <section class="card dados-pessoais-card">
+                    <div class="card-header-gold">🪪 MEUS DADOS FUNCIONAIS</div>
+                    <div style="padding:22px;">
+                        <div class="dados-pessoais-aviso">
+                            <strong style="color:#ffcc00;">Atenção:</strong> você pode alterar seu nome e seu ID.
+                            A patente é controlada pelo Alto Comando e será mantida automaticamente.
+                            Depois de salvar, a alteração será sincronizada com o banco compartilhado para os demais policiais.
+                        </div>
+                        <div class="dados-pessoais-grid">
+                            <div>
+                                <label for="dados-nome">Nome</label>
+                                <input id="dados-nome" type="text" placeholder="Ex.: PALMEIRA" autocomplete="off">
+                                <small style="display:block;color:#777;margin-top:6px;">Digite somente seu nome. A patente será acrescentada automaticamente.</small>
+                            </div>
+                            <div>
+                                <label for="dados-id">ID do Jogo</label>
+                                <input id="dados-id" type="text" inputmode="numeric" placeholder="Ex.: 23012" autocomplete="off">
+                            </div>
+                        </div>
+                        <div style="margin-top:22px;display:flex;gap:12px;flex-wrap:wrap;">
+                            <button type="button" class="btn-ponto iniciar" style="margin:0;" onclick="carregarDadosPessoais()">🔄 ATUALIZAR DADOS ATUAIS</button>
+                            <button type="button" class="btn-ponto iniciar" style="margin:0;background:#ffcc00;color:#121212;" onclick="salvarAlteracaoDados()">💾 SALVAR ALTERAÇÕES</button>
+                        </div>
+                        <p id="dados-status" style="margin:15px 0 0;color:#8e8e93;font-size:12px;"></p>
+                    </div>
+                </section>
+            </div>
+
             <!-- ====== ABA 8: QUADRO DE HIERARQUIA DINÂMICA WITH CONTADORES ====== -->
             <div id="content-hierarquia" class="aba-conteudo hidden">
                 <header class="main-header">
@@ -745,6 +796,8 @@
                         if (typeof renderizarMuralAusencias === 'function') renderizarMuralAusencias();
                         if (typeof renderizarNecroteca === 'function') renderizarNecroteca();
                         if (typeof renderizarHistoriaBPE === 'function') renderizarHistoriaBPE();
+                        sincronizarUsuarioAtualNaTela();
+                        atualizarTagEstagioUsuario();
                         atualizarTabelasGerais();
                     } catch (_) {}
                 }
@@ -1046,11 +1099,13 @@
 
                 document.addEventListener("DOMContentLoaded", async function() {
                     await sincronizarBancoBPE();
-                    const usuario = localStorage.getItem('usuarioLogado') || 'Policial';
-                    const id = localStorage.getItem('idLogado') || '0000';
+                    const pmAtual = sincronizarUsuarioAtualNaTela();
+                    const usuario = pmAtual?.usuario || localStorage.getItem('usuarioLogado') || 'Policial';
+                    const id = pmAtual?.id || localStorage.getItem('idLogado') || '0000';
                     document.getElementById('user-display').textContent = usuario;
                     document.getElementById('ponto-nome').textContent = usuario;
                     document.getElementById('ponto-id').textContent = id;
+                    carregarDadosPessoais();
                     atualizarMenuAcesso();
                     aplicarBloqueioAcesso();
                     if (usuarioTemAcessoOperacional()) {
@@ -1094,6 +1149,7 @@
                     if (btn) btn.classList.add('active');
 
                     if (abaNome === 'hierarquia') renderizarHierarquiaGeral();
+                    if (abaNome === 'dados') carregarDadosPessoais();
                     if (abaNome === 'coronel') {
                         renderizarBoletinsECommunicados();
                         renderizarSolicitacoesAcesso();
@@ -1121,6 +1177,27 @@
                         btnAdmin.classList.add('hidden');
                         btnAdmin.style.display = 'none';
                     }
+                }
+
+                function sincronizarUsuarioAtualNaTela() {
+                    const lista = lerJSON('bancoUsuariosBPE', []);
+                    const idAtual = String(localStorage.getItem('idLogado') || '');
+                    const nomeAtual = normalizarTexto(localStorage.getItem('usuarioLogado') || '');
+                    const pm = lista.find(x => String(x.id) === idAtual || normalizarTexto(x.usuario || x.nome) === nomeAtual);
+                    if (!pm) return null;
+
+                    const nomeBanco = String(pm.usuario || pm.nome || '').trim();
+                    if (nomeBanco) {
+                        localStorage.setItem('usuarioLogado', nomeBanco);
+                        const userDisplay = document.getElementById('user-display');
+                        const pontoNome = document.getElementById('ponto-nome');
+                        if (userDisplay) userDisplay.textContent = nomeBanco;
+                        if (pontoNome) pontoNome.textContent = nomeBanco;
+                    }
+                    localStorage.setItem('idLogado', String(pm.id));
+                    const pontoId = document.getElementById('ponto-id');
+                    if (pontoId) pontoId.textContent = String(pm.id);
+                    return pm;
                 }
 
                 function atualizarTagEstagioUsuario() {
@@ -1201,6 +1278,7 @@
                         pm.patente = novaPatente;
                         pm.cargo = novaPatente;
                         pm.usuario = montarNomeComPatente(pm, novaPatente);
+                        pm.nome = pm.usuario;
                         registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} promoveu ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
                     }
 
@@ -1214,6 +1292,7 @@
                         pm.patente = novaPatente;
                         pm.cargo = novaPatente;
                         pm.usuario = montarNomeComPatente(pm, novaPatente);
+                        pm.nome = pm.usuario;
                         registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} rebaixou ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
                     }
 
@@ -1245,10 +1324,137 @@
                     }
 
                     salvarJSON('bancoUsuariosBPE', lista);
+                    sincronizarUsuarioAtualNaTela();
                     fecharMenuGestaoMilitar();
                     atualizarTagEstagioUsuario();
                     renderizarHierarquiaGeral();
                     renderizarBoletinsECommunicados();
+                }
+
+                function carregarDadosPessoais() {
+                    const pm = sincronizarUsuarioAtualNaTela();
+                    if (!pm) return;
+                    const separacao = separarNomePatente(pm.usuario || pm.nome || '', pm.patente);
+                    const nomeInput = document.getElementById('dados-nome');
+                    const idInput = document.getElementById('dados-id');
+                    if (nomeInput) nomeInput.value = separacao.nomeDepoisDoPM || '';
+                    if (idInput) idInput.value = String(pm.id || '');
+                    const status = document.getElementById('dados-status');
+                    if (status) status.textContent = `Dados atuais: ${String(pm.usuario || '').toUpperCase()} • ID ${pm.id}`;
+                }
+
+                function salvarAlteracaoDados() {
+                    if (!usuarioTemAcessoOperacional()) {
+                        alert('🔒 Seu acesso operacional ainda não está liberado.');
+                        return;
+                    }
+
+                    const nomeDigitado = String(document.getElementById('dados-nome')?.value || '').trim();
+                    const novoId = String(document.getElementById('dados-id')?.value || '').trim();
+                    if (!nomeDigitado || !novoId) {
+                        alert('⚠️ Preencha o nome e o ID.');
+                        return;
+                    }
+
+                    const lista = lerJSON('bancoUsuariosBPE', []);
+                    const idAtual = String(localStorage.getItem('idLogado') || '');
+                    const nomeAtual = normalizarTexto(localStorage.getItem('usuarioLogado') || '');
+                    const indice = lista.findIndex(x => String(x.id) === idAtual || normalizarTexto(x.usuario || x.nome) === nomeAtual);
+                    if (indice < 0) {
+                        alert('❌ Não foi possível localizar seu cadastro no banco de efetivo.');
+                        return;
+                    }
+
+                    const pm = lista[indice];
+                    const patenteAtual = obterPatenteDoPolicial(pm);
+                    const separacaoDigitada = separarNomePatente(nomeDigitado, patenteAtual);
+                    let nomeSemPatente = String(separacaoDigitada.nomeDepoisDoPM || nomeDigitado).trim();
+                    nomeSemPatente = nomeSemPatente.replace(/^PM\s+/i, '').trim();
+                    if (!nomeSemPatente) {
+                        alert('⚠️ Informe um nome válido.');
+                        return;
+                    }
+
+                    const nomeCompletoNovo = `${normalizarPatenteCanonica(patenteAtual) || patenteAtual} PM ${nomeSemPatente}`.trim();
+                    const conflito = lista.some((outro, i) => i !== indice && (
+                        String(outro.id) === novoId || normalizarTexto(outro.usuario || outro.nome) === normalizarTexto(nomeCompletoNovo)
+                    ));
+                    if (conflito) {
+                        alert('❌ Esse ID ou esse nome já está sendo utilizado por outro policial.');
+                        return;
+                    }
+
+                    const idAntigo = String(pm.id);
+                    const nomeAntigo = String(pm.usuario || pm.nome || '');
+                    if (!confirm(`CONFIRMAR ALTERAÇÃO\n\nDe: ${nomeAntigo} (ID ${idAntigo})\nPara: ${nomeCompletoNovo} (ID ${novoId})\n\nA alteração será aplicada ao cadastro compartilhado do batalhão.`)) return;
+
+                    pm.id = novoId;
+                    pm.usuario = nomeCompletoNovo;
+                    pm.nome = nomeCompletoNovo;
+                    pm.patente = patenteAtual;
+                    pm.cargo = patenteAtual;
+                    lista[indice] = pm;
+                    salvarJSON('bancoUsuariosBPE', lista);
+
+                    // Mantém o cadastro usado no login sincronizado.
+                    const usuarios = lerJSON('usuariosBPE', []);
+                    const usuarioIdx = usuarios.findIndex(u => String(u.id) === idAntigo || normalizarTexto(u.nome) === normalizarTexto(nomeAntigo));
+                    if (usuarioIdx >= 0) {
+                        usuarios[usuarioIdx].id = novoId;
+                        usuarios[usuarioIdx].nome = nomeCompletoNovo;
+                        salvarJSON('usuariosBPE', usuarios);
+                    }
+
+                    // Atualiza registros ligados ao ID/nome para não quebrar históricos e ausências.
+                    const ausencias = lerJSON('bancoAusenciasBPE', []);
+                    ausencias.forEach(a => {
+                        if (String(a.policialId) === idAntigo || normalizarTexto(a.nome) === normalizarTexto(nomeAntigo)) {
+                            a.policialId = novoId;
+                            a.nome = nomeCompletoNovo;
+                        }
+                    });
+                    salvarJSON('bancoAusenciasBPE', ausencias);
+
+                    const pontos = lerJSON('historicoPontosBPE', []);
+                    pontos.forEach(p => {
+                        if (String(p.id) === idAntigo || normalizarTexto(p.policial) === normalizarTexto(nomeAntigo)) {
+                            p.id = novoId;
+                            p.policial = nomeCompletoNovo;
+                        }
+                    });
+                    salvarJSON('historicoPontosBPE', pontos);
+
+                    const relatorios = lerJSON('bancoRelatoriosBPE', []);
+                    relatorios.forEach(r => {
+                        if (normalizarTexto(r.policialCriador) === normalizarTexto(nomeAntigo)) r.policialCriador = nomeCompletoNovo;
+                    });
+                    salvarJSON('bancoRelatoriosBPE', relatorios);
+
+                    // Ranking de apreensões usa o nome+ID como chave.
+                    const ranking = lerJSON('rankingApreensoesBPE', {});
+                    const chaveAntiga = `${nomeAntigo} (ID: ${idAntigo})`;
+                    const chaveNova = `${nomeCompletoNovo} (ID: ${novoId})`;
+                    if (Object.prototype.hasOwnProperty.call(ranking, chaveAntiga)) {
+                        ranking[chaveNova] = (ranking[chaveNova] || 0) + (Number(ranking[chaveAntiga]) || 0);
+                        if (chaveAntiga !== chaveNova) delete ranking[chaveAntiga];
+                    }
+                    salvarJSON('rankingApreensoesBPE', ranking);
+
+                    localStorage.setItem('usuarioLogado', nomeCompletoNovo);
+                    localStorage.setItem('idLogado', novoId);
+                    localStorage.setItem('cargoUsuario', patenteAtual);
+                    localStorage.setItem('acessoSupremo', localStorage.getItem('acessoSupremo') || 'false');
+
+                    registrarLogAuditoria(`O usuário ${nomeAntigo} (ID ${idAntigo}) alterou seus dados para ${nomeCompletoNovo} (ID ${novoId}).`);
+                    sincronizarUsuarioAtualNaTela();
+                    carregarDadosPessoais();
+                    atualizarTagEstagioUsuario();
+                    renderizarHierarquiaGeral();
+                    atualizarTabelasGerais();
+                    renderizarMuralRSO();
+                    renderizarMuralAusencias();
+                    verificarStatusAusenciaUsuario();
+                    alert('✅ Seus dados foram atualizados e enviados ao banco compartilhado.');
                 }
 
                 function renderizarHierarquiaGeral() {
@@ -1864,9 +2070,18 @@
                     if(resumo)resumo.innerHTML=arrM.slice(0,3).map((x,i)=>`<li><span class="rank-pos">${i+1}º</span><span class="rank-item">📦 ${x.nome.toUpperCase()}:</span><span class="rank-qtd">${x.qtd} UNIDADES</span></li>`).join('')||'<li><span class="rank-pos">1º</span><span class="rank-item">Nenhum item registrado</span></li>';
                 }
 
+                function irParaCadastro(){
+                    // Usa o endereço relativo ao próprio painel para funcionar no GitHub Pages.
+                    const destino = new URL('./cadastro.html', window.location.href).href;
+                    window.location.assign(destino);
+                }
+
                 function fazerLogout(){
                     localStorage.removeItem('acessoSupremo');
-                    window.location.href="cadastro.html";
+                    localStorage.removeItem('usuarioLogado');
+                    localStorage.removeItem('idLogado');
+                    localStorage.removeItem('cargoUsuario');
+                    irParaCadastro();
                 }
             </script>
             <div class="site-credit">Site criado por Palmeira • 20/08/2026</div>
