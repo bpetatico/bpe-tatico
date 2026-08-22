@@ -39,20 +39,13 @@
         .access-lock { max-width:760px;margin:60px auto; text-align:center; }
         .access-lock .lock-icon { font-size:58px;margin-bottom:10px; }
         .site-credit { position:fixed; right:12px; bottom:8px; color:#666;font-size:10px;z-index:10;pointer-events:none; }
-        .btn-retornar-cadastro {
-            position:fixed; top:12px; right:16px; z-index:10000;
-            background:#2c2c2e; color:#fff; border:1px solid #555;
-            padding:9px 14px; border-radius:7px; font-weight:800;
-            cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.35);
-        }
-        .btn-retornar-cadastro:hover { border-color:#ffcc00; color:#ffcc00; }
         .dados-pessoais-card { max-width:760px; margin:25px auto; }
         .dados-pessoais-aviso { background:rgba(255,204,0,.08); border:1px solid rgba(255,204,0,.3); color:#d7d7d7; padding:14px; border-radius:8px; line-height:1.6; margin-bottom:20px; }
         .dados-pessoais-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
         .dados-pessoais-grid label { display:block; color:#aeaea3; font-size:13px; margin-bottom:6px; }
         .dados-pessoais-grid input { width:100%; box-sizing:border-box; padding:12px; background:#2c2c2e; border:1px solid #3a3a3c; color:#fff; border-radius:6px; outline:none; }
         .dados-pessoais-grid input:focus { border-color:#ffcc00; }
-        @media (max-width:700px) { .dados-pessoais-grid { grid-template-columns:1fr; } .btn-retornar-cadastro { top:8px; right:8px; padding:8px 10px; font-size:11px; } }
+        @media (max-width:700px) { .dados-pessoais-grid { grid-template-columns:1fr; } }
 
         /* ===== BPE TÁTICO — ROLAGEM CORRIGIDA ===== */
         html, body { height:100%; min-height:100%; }
@@ -161,7 +154,6 @@
 
         <!-- CONTEÚDO PRINCIPAL (MURAL CENTRAL DINÂMICO E ISOLADO) -->
         <main class="main-content">
-            <button class="btn-retornar-cadastro" type="button" onclick="irParaCadastro()">↩️ Retornar</button>
             <!-- ====== PORTA DE ACESSO ====== -->
             <div id="content-acesso" class="aba-conteudo hidden">
                 <div class="card access-lock">
@@ -720,7 +712,7 @@
             'usuariosBPE', 'bancoUsuariosBPE', 'historicoPontosBPE', 'rankingApreensoesBPE',
             'topMateriaisBPE', 'bancoRelatoriosBPE', 'bancoLogsDelecaoBPE', 'bancoAusenciasBPE',
             'bancoBoletinsBPE', 'bancoSolicitacoesAcessoBPE', 'bancoNecrotecaBPE',
-            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bpePolicialDestaque', 'historiaBPE'
+            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bpePolicialDestaque', 'bpePolicialDestaqueExcluidoEm', 'historiaBPE'
         ];
         let bpeBancoPronto = false;
         let bpeSincronizando = null;
@@ -764,6 +756,38 @@
                         // Se uma chave ainda não existir na nuvem, preservamos o dado local
                         // e fazemos a primeira subida dessa chave para o banco compartilhado.
                         for (const chave of BPE_SHARED_KEYS) {
+                            if (chave === 'bpePolicialDestaque') {
+                                const localExclusao = Number(localStorage.getItem('bpePolicialDestaqueExcluidoEm') || 0);
+                                const linha = mapa.get(chave);
+                                const nuvemAtualizacao = linha?.atualizado_em ? Date.parse(linha.atualizado_em) : 0;
+
+                                // Tombstone: uma exclusão confirmada pelo comando nunca pode ser
+                                // ressuscitada por uma cópia antiga que ainda esteja em algum cliente.
+                                if (localExclusao > nuvemAtualizacao) {
+                                    localStorage.setItem(chave, JSON.stringify(null));
+                                    await bpeSalvarNuvem(chave, null);
+                                    continue;
+                                }
+                                if (linha) {
+                                    localStorage.setItem(chave, JSON.stringify(linha.valor));
+                                } else {
+                                    const raw = localStorage.getItem(chave);
+                                    if (raw !== null) {
+                                        try { await bpeSalvarNuvem(chave, JSON.parse(raw)); } catch (_) {}
+                                    }
+                                }
+                                continue;
+                            }
+
+                            if (chave === 'bpePolicialDestaqueExcluidoEm') {
+                                if (mapa.has(chave)) {
+                                    const remoto = Number(mapa.get(chave).valor || 0);
+                                    const local = Number(localStorage.getItem(chave) || 0);
+                                    localStorage.setItem(chave, String(Math.max(local, remoto)));
+                                }
+                                continue;
+                            }
+
                             if (mapa.has(chave)) {
                                 localStorage.setItem(chave, JSON.stringify(mapa.get(chave).valor));
                             } else {
@@ -771,6 +795,18 @@
                                 if (raw !== null) {
                                     try { await bpeSalvarNuvem(chave, JSON.parse(raw)); } catch (_) {}
                                 }
+                            }
+                        }
+
+                        // Depois de receber o tombstone de outro computador, garante que o
+                        // destaque local também seja nulo e que a exclusão seja propagada.
+                        const tombstone = Number(localStorage.getItem('bpePolicialDestaqueExcluidoEm') || 0);
+                        const linhaDestaque = mapa.get('bpePolicialDestaque');
+                        if (tombstone && linhaDestaque) {
+                            const nuvemAtualizacao = linhaDestaque.atualizado_em ? Date.parse(linhaDestaque.atualizado_em) : 0;
+                            if (tombstone > nuvemAtualizacao) {
+                                localStorage.setItem('bpePolicialDestaque', JSON.stringify(null));
+                                await bpeSalvarNuvem('bpePolicialDestaque', null);
                             }
                         }
                     }
@@ -908,6 +944,7 @@
                     ]);
                 }
                  if (!localStorage.getItem('bpePolicialDestaque')) salvarJSON('bpePolicialDestaque', null);
+                 if (!localStorage.getItem('bpePolicialDestaqueExcluidoEm')) localStorage.setItem('bpePolicialDestaqueExcluidoEm', '0');
 
                 function normalizarTexto(valor) {
                     return String(valor || "")
@@ -1681,15 +1718,10 @@
 
                 function nomeItemPareceValido(item){
                     const texto = normalizarItemOCR(item);
-                    if(texto.length < 3 || !/[A-Za-zÀ-ÿ]/.test(texto)) return false;
-
-                    // Não há nenhum material fixado/hardcoded aqui.
-                    // O OCR aceita qualquer nome que apareça no print e venha acompanhado de quantidade.
-                    const ignorados = /^(id|total|quantidade|qtd|x|item|invent[aá]rio|peso|valor|pre[cç]o|dinheiro|saldo|capacidade|slot|espa[cç]o|muni[cç][aã]o)$/i;
+                    if(texto.length < 2 || !/[A-Za-zÀ-ÿ]/.test(texto)) return false;
+                    const ignorados = /^(id|total|quantidade|qtd|item|invent[aá]rio|peso|valor|pre[cç]o|dinheiro|saldo|capacidade|slot|espa[cç]o|unidades?|und|qtd|x)$/i;
                     if(ignorados.test(texto)) return false;
-
-                    // Evita capturar frases de interface como se fossem itens.
-                    if(/^(abrir|fechar|usar|descartar|equipar|voltar|sair|confirmar|cancelar|invent[aá]rio)$/i.test(texto)) return false;
+                    if(/^(abrir|fechar|usar|descartar|equipar|voltar|sair|confirmar|cancelar|invent[aá]rio|escaneando|enviado)$/i.test(texto)) return false;
                     return true;
                 }
 
@@ -1697,23 +1729,24 @@
                     item = normalizarItemOCR(item);
                     qtd = parseInt(qtd,10);
                     if(!nomeItemPareceValido(item) || !Number.isFinite(qtd) || qtd <= 0 || qtd > 100000) return;
-                    lista.push({item, qtd});
+                    // Remove lixo típico de OCR no fim/início do nome.
+                    item = item.replace(/[|:;,.]+$/g,'').replace(/^[|:;,.]+/g,'').trim();
+                    if(item.length >= 2) lista.push({item, qtd});
                 }
 
                 function extrairMateriaisDoOCR(texto){
                     const resultados = [];
                     const original = String(texto || '').replace(/\r/g,'');
-                    const linhas = original.split('\n').map(l => l.trim()).filter(Boolean);
+                    const linhas = original.split('\n').map(l => l.replace(/[|]/g,' ').replace(/\s+/g,' ').trim()).filter(Boolean);
 
-                    // 1) Primeiro procura pares ITEM + QUANTIDADE no texto inteiro.
-                    // Aceita x20, ×20, "20 x", "20 unidades", etc.
+                    // O inventário pode aparecer em várias formas. Procuramos pares de item + quantidade
+                    // em TODO o texto, e não por uma lista fixa de drogas/armas.
                     const padroes = [
-                        /([^\n|]{2,80}?)\s*[x×]\s*(\d{1,6})\b/gi,
-                        /\b(\d{1,6})\s*[x×]\s*([^\n|]{2,80}?)(?=\s{2,}|$)/gi,
-                        /([^\n|]{2,80}?)\s+\b(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?\b/gi,
-                        /\b(\d{1,6})\s+(?:un(?:idade)?s?|und)\s+([^\n|]{2,80})/gi
+                        /([^\n]{2,100}?)\s*[x×*]\s*(\d{1,6})\b/gi,
+                        /\b(\d{1,6})\s*[x×*]\s*([^\n]{2,100}?)(?=\s{2,}|$)/gi,
+                        /([^\n]{2,100}?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?\b/gi,
+                        /\b(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)\s+([^\n]{2,100})/gi
                     ];
-
                     for(const regex of padroes){
                         let m;
                         while((m = regex.exec(original)) !== null){
@@ -1722,30 +1755,30 @@
                         }
                     }
 
-                    // 2) Fallback linha a linha para inventários onde o OCR separa nome e quantidade.
+                    // Fallback por linha.
                     linhas.forEach((linha, indice) => {
                         let m;
-
-                        m = linha.match(/^(.+?)\s*[x×]\s*(\d{1,6})\s*(?:un(?:idade)?s?|und)?$/i);
+                        m = linha.match(/^(.+?)\s*[x×*]\s*(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
                         if(m){ adicionarResultadoMaterial(resultados, m[1], m[2]); return; }
-
-                        m = linha.match(/^(\d{1,6})\s*[x×]\s*(.+)$/i);
+                        m = linha.match(/^(\d{1,6})\s*[x×*]\s*(.+)$/i);
+                        if(m){ adicionarResultadoMaterial(resultados, m[2], m[1]); return; }
+                        m = linha.match(/^(.+?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
+                        if(m){ adicionarResultadoMaterial(resultados, m[1], m[2]); return; }
+                        m = linha.match(/^(\d{1,6})\s+(?:un(?:idade)?s?|und|qtd)\s+(.+)$/i);
                         if(m){ adicionarResultadoMaterial(resultados, m[2], m[1]); return; }
 
-                        m = linha.match(/^(.+?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und)?$/i);
-                        if(m){ adicionarResultadoMaterial(resultados, m[1], m[2]); return; }
-
-                        m = linha.match(/^(\d{1,6})\s+(?:un(?:idade)?s?|und)\s+(.+)$/i);
-                        if(m){ adicionarResultadoMaterial(resultados, m[2], m[1]); return; }
-
-                        // Alguns inventários exibem o nome em uma linha e "x20" na seguinte.
+                        // Nome e quantidade em linhas vizinhas: ITEM / x20 ou x20 / ITEM.
                         if(indice < linhas.length - 1 && /^x?\s*\d{1,6}$/i.test(linha)){
                             const qtd = linha.match(/\d{1,6}/)?.[0];
                             adicionarResultadoMaterial(resultados, linhas[indice + 1], qtd);
                         }
+                        if(indice > 0 && /^x?\s*\d{1,6}$/i.test(linha)){
+                            const qtd = linha.match(/\d{1,6}/)?.[0];
+                            adicionarResultadoMaterial(resultados, linhas[indice - 1], qtd);
+                        }
                     });
 
-                    // Junta materiais repetidos dentro do MESMO print.
+                    // Junta nomes repetidos no mesmo print.
                     const agrupado = {};
                     resultados.forEach(r => {
                         const chave = normalizarTexto(r.item);
@@ -1753,6 +1786,61 @@
                         agrupado[chave].qtd += r.qtd;
                     });
                     return Object.values(agrupado);
+                }
+
+                async function prepararImagemOCR(file){
+                    return new Promise((resolve, reject) => {
+                        const img = new Image();
+                        const url = URL.createObjectURL(file);
+                        img.onload = () => {
+                            try {
+                                const escala = Math.min(3, Math.max(2, 1800 / Math.max(img.width, img.height)));
+                                const w = Math.max(1, Math.round(img.width * escala));
+                                const h = Math.max(1, Math.round(img.height * escala));
+                                const canvas = document.createElement('canvas');
+                                canvas.width = w; canvas.height = h;
+                                const ctx = canvas.getContext('2d', {willReadFrequently:true});
+                                ctx.drawImage(img, 0, 0, w, h);
+                                const dados = ctx.getImageData(0,0,w,h);
+                                for(let i=0;i<dados.data.length;i+=4){
+                                    const r=dados.data[i], g=dados.data[i+1], b=dados.data[i+2];
+                                    let v = 0.299*r + 0.587*g + 0.114*b;
+                                    // Contraste leve + preservação de texto claro em fundo escuro.
+                                    v = Math.max(0, Math.min(255, (v-128)*1.45+128));
+                                    dados.data[i]=dados.data[i+1]=dados.data[i+2]=v;
+                                }
+                                ctx.putImageData(dados,0,0);
+                                canvas.toBlob(blob => { URL.revokeObjectURL(url); blob ? resolve(blob) : reject(new Error('Falha ao preparar imagem')); }, 'image/png');
+                            } catch(e){ URL.revokeObjectURL(url); reject(e); }
+                        };
+                        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
+                        img.src = url;
+                    });
+                }
+
+                async function executarOCRRobusto(file){
+                    const textos = [];
+                    // Primeira passada: imagem original, útil quando há cores/contraste importantes.
+                    try {
+                        const r = await Tesseract.recognize(file, 'por+eng', {config: '--psm 11'});
+                        if(r?.data?.text) textos.push(r.data.text);
+                    } catch(e) { console.warn('[BPE OCR] passada original falhou', e); }
+
+                    // Segunda passada: imagem ampliada e em escala de cinza, melhora inventários escuros.
+                    try {
+                        const preparada = await prepararImagemOCR(file);
+                        const r = await Tesseract.recognize(preparada, 'por+eng', {config: '--psm 6'});
+                        if(r?.data?.text) textos.push(r.data.text);
+                    } catch(e) { console.warn('[BPE OCR] passada tratada falhou', e); }
+
+                    // Terceira passada esparsa para caixas de inventário com muitos blocos separados.
+                    try {
+                        const preparada = await prepararImagemOCR(file);
+                        const r = await Tesseract.recognize(preparada, 'por+eng', {config: '--psm 11'});
+                        if(r?.data?.text) textos.push(r.data.text);
+                    } catch(e) { console.warn('[BPE OCR] passada esparsa falhou', e); }
+
+                    return textos.join('\n');
                 }
 
                 function atualizarFilaApreensoes(){
@@ -1764,7 +1852,7 @@
                     } else {
                         box.innerHTML = printsApreensaoPendentes.map((p,i)=>
                             `<div style="padding:10px 12px;border-bottom:1px solid #333;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
-                                <span>📸 Print ${i+1} — ${p.resultados.length ? p.resultados.map(r=>`${r.item}: ${r.qtd}`).join(' • ') : 'nenhum material identificado automaticamente'}</span>
+                                <span>📸 Print ${i+1} — ${p.resultados.length ? p.resultados.map(r=>`${r.item}: ${r.qtd}`).join(' • ') : 'OCR sem identificação automática — revise o print antes de enviar'}</span>
                                 <button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button>
                             </div>`
                         ).join('');
@@ -1777,27 +1865,28 @@
                     atualizarFilaApreensoes();
                 }
 
-                function processarImagemApreensao(file){
+                async function processarImagemApreensao(file){
                     if(!file || !file.type || !file.type.startsWith('image/')) return;
                     if(typeof Tesseract === 'undefined'){
                         alert('❌ O leitor OCR não está disponível nesta página.');
                         return;
                     }
-
                     const numero = printsApreensaoPendentes.length + 1;
                     alert(`🤖 Lendo todos os itens do print ${numero} do inventário...`);
-
-                    Tesseract.recognize(file, 'por+eng').then(({data:{text}})=>{
+                    try {
+                        const text = await executarOCRRobusto(file);
                         const resultados = extrairMateriaisDoOCR(text);
                         printsApreensaoPendentes.push({file, resultados, textoOCR:text});
                         atualizarFilaApreensoes();
-
                         if(resultados.length){
                             alert(`✅ Print ${numero} lido. Foram identificados ${resultados.length} tipo(s) de material:\n\n${resultados.map(r=>`${r.item}: ${r.qtd}`).join('\n')}\n\nO print ficou aguardando envio.`);
                         } else {
-                            alert(`⚠️ Print ${numero} foi recebido, mas o OCR não conseguiu identificar automaticamente os itens e quantidades.\n\nO print continua na fila para envio.`);
+                            alert(`⚠️ O OCR não conseguiu interpretar automaticamente os nomes/quantidades deste print.\n\nO print continua na fila. Você pode revisar e enviar, mas a contagem automática de materiais deste print não será inventada.`);
                         }
-                    }).catch(()=>alert('❌ Não foi possível ler o print.'));
+                    } catch(e) {
+                        console.error('[BPE OCR]', e);
+                        alert('❌ Não foi possível processar o print.');
+                    }
                 }
 
                 function adicionarPrintsApreensao(input){
@@ -2060,13 +2149,17 @@
                     if (!podeExcluirConteudo()) { alert('🔒 Exclusão não autorizada.'); return; }
                     if (!confirm('Excluir o Policial da Semana?')) return;
 
-                    // Primeiro grava localmente e, em seguida, força a mesma exclusão no Supabase.
-                    // Isso evita que uma sincronização antiga restaure o destaque alguns segundos depois.
+                    // Tombstone compartilhado: impede que uma cópia antiga de outro navegador
+                    // faça o destaque voltar durante a sincronização.
+                    const agora = Date.now();
+                    localStorage.setItem('bpePolicialDestaqueExcluidoEm', String(agora));
                     localStorage.setItem('bpePolicialDestaque', JSON.stringify(null));
                     try {
-                        if (typeof bpeSalvarNuvem === 'function') {
-                            await bpeSalvarNuvem('bpePolicialDestaque', null);
-                        }
+                        await bpeSalvarNuvem('bpePolicialDestaqueExcluidoEm', agora);
+                        await bpeSalvarNuvem('bpePolicialDestaque', null);
+                        // Segunda confirmação reduz ainda mais a chance de uma gravação antiga
+                        // que estava em trânsito chegar depois da exclusão.
+                        await bpeSalvarNuvem('bpePolicialDestaque', null);
                     } catch (e) {
                         console.error('[BPE] Falha ao excluir destaque na nuvem:', e);
                     }
@@ -2120,10 +2213,15 @@
                 function processarFotoDestaque(input){
                     if(input.files?.[0]){const leitor=new FileReader();leitor.onload=e=>{document.getElementById('adm-destaque-base64').value=e.target.result;const p=document.getElementById('adm-destaque-preview');p.src=e.target.result;p.classList.remove('hidden');};leitor.readAsDataURL(input.files[0]);}
                 }
-                function salvarPolicialDestaque(event){
+                async function salvarPolicialDestaque(event){
                     event.preventDefault();if(!podeGerenciarPainelAltoComando()){alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");return;}
                     const dados={nome:document.getElementById('adm-destaque-nome').value,texto:document.getElementById('adm-destaque-texto').value,foto:document.getElementById('adm-destaque-base64').value||""};
-                    salvarJSON('bpePolicialDestaque',dados);document.getElementById('form-admin-destaque').reset();document.getElementById('adm-destaque-preview').classList.add('hidden');document.getElementById('adm-destaque-base64').value="";renderizarBoletinsECommunicados();alert("Policial Destaque publicado!");
+                    // Nova publicação cancela o tombstone anterior.
+                    localStorage.setItem('bpePolicialDestaqueExcluidoEm','0');
+                    localStorage.setItem('bpePolicialDestaque',JSON.stringify(dados));
+                    await bpeSalvarNuvem('bpePolicialDestaqueExcluidoEm',0);
+                    await bpeSalvarNuvem('bpePolicialDestaque',dados);
+                    document.getElementById('form-admin-destaque').reset();document.getElementById('adm-destaque-preview').classList.add('hidden');document.getElementById('adm-destaque-base64').value="";renderizarBoletinsECommunicados();alert("Policial Destaque publicado!");
                 }
                 function publicarBoletimOficial(event){
                     event.preventDefault();if(!podeGerenciarPainelAltoComando()){alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");return;}
