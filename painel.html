@@ -381,8 +381,8 @@
                         <div class="form-section-title" style="color: #0052cc;">📜 HISTÓRICO</div>
                         <textarea id="rel-historico" class="full-width-textarea" placeholder="Histórico..." required></textarea>
                         <div class="input-row-2">
-                            <input type="number" id="rel-bopm" value="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
-                            <input type="number" id="rel-obitos" value="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
+                            <div class="input-group"><label>Quantidade de BOPMs realizados</label><input type="number" id="rel-bopm" value="0" min="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
+                            <div class="input-group"><label>Quantidade de óbitos</label><input type="number" id="rel-obitos" value="0" min="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;"></div>
                         </div>
                         <input type="text" id="rel-materiais" placeholder="Materiais..." style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
                         <div class="input-row-2" style="margin-top: 15px;"><button type="submit" class="btn-ponto iniciar">ENVIAR RSO</button><button type="button" class="btn-logout" onclick="cancelarRSO()">CANCELAR</button></div>
@@ -412,7 +412,9 @@
                         <div class="input-group" style="width: 100%;">
                             <label>Anexar Foto do Veículo</label>
                             <input type="file" id="gui-foto-arquivo" accept="image/*" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;" onchange="processarFotoVeiculo(this)">
-                            <img id="gui-preview-img" src="" class="hidden" style="max-height: 150px; margin-top: 10px; border-radius: 6px; border: 1px solid #ffcc00; display: block;">
+                            <div id="gui-paste-area" tabindex="0" style="margin-top:8px;padding:12px;border:1px dashed #ffcc00;border-radius:8px;background:#171717;color:#ccc;text-align:center;cursor:text;outline:none;">📋 <strong style="color:#ffcc00;">Cole o print aqui com CTRL + V</strong><br><small>Você também pode usar o botão acima para selecionar uma imagem.</small></div>
+                            <img id="gui-preview-img" src="" class="hidden" style="max-width:100%; max-height:320px; margin-top:10px; border-radius:6px; border:1px solid #ffcc00; display:block; object-fit:contain;">
+                            <div id="gui-paste-status" style="margin-top:6px;color:#8f8f8f;font-size:12px;"></div>
                             <input type="hidden" id="gui-foto-base64">
                         </div>
                         <div class="input-row-2" style="margin-top: 15px;"><button type="submit" class="btn-ponto iniciar" style="background-color:#ffcc00; color:#121212;">ENVIAR GUINCHO</button><button type="button" class="btn-logout" onclick="cancelarGuincho()">CANCELAR</button></div>
@@ -1565,6 +1567,28 @@
                     alert('✅ Seus dados foram atualizados e enviados ao banco compartilhado.');
                 }
 
+                function obterAusenciaAtivaDoPolicial(pm, bancoAusencias) {
+                    const id = String(pm?.id || '').trim();
+                    const nome = normalizarTexto(String(pm?.usuario || pm?.nome || '')).trim();
+                    const hoje = new Date();
+                    hoje.setHours(0,0,0,0);
+                    return bancoAusencias.find(a => {
+                        const aid = String(a?.policialId || '').trim();
+                        const anome = normalizarTexto(String(a?.nome || '')).trim();
+                        if (id && aid && aid === id) {
+                            const di = new Date(String(a.inicio||'') + 'T00:00:00');
+                            const df = new Date(String(a.fim||'') + 'T00:00:00');
+                            return !isNaN(di) && !isNaN(df) && hoje >= di && hoje <= df;
+                        }
+                        if (nome && anome && nome === anome) {
+                            const di = new Date(String(a.inicio||'') + 'T00:00:00');
+                            const df = new Date(String(a.fim||'') + 'T00:00:00');
+                            return !isNaN(di) && !isNaN(df) && hoje >= di && hoje <= df;
+                        }
+                        return false;
+                    });
+                }
+
                 function renderizarHierarquiaGeral() {
                     const listaPoliciais = lerJSON('bancoUsuariosBPE', []);
                     const bancoAusencias = lerJSON('bancoAusenciasBPE', []);
@@ -1592,12 +1616,7 @@
                         const idPolicial = String(pm.id || "0000");
                         const nomeCompleto = String(pm.usuario || pm.nome || "POLICIAL").trim();
 
-                        const aus = bancoAusencias.find(a => {
-                            if (String(a.policialId) !== idPolicial) return false;
-                            const di = new Date(a.inicio + 'T00:00:00');
-                            const df = new Date(a.fim + 'T00:00:00');
-                            return hoje >= di && hoje <= df;
-                        });
+                        const aus = obterAusenciaAtivaDoPolicial(pm, bancoAusencias);
 
                         const card = document.createElement('div');
                         card.style.cssText = "background:#1c1c1e;padding:15px;border-radius:6px;border:1px solid #2c2c2e;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.2);cursor:pointer;";
@@ -2024,8 +2043,44 @@ function removerPrintApreensao(indice){
                 function exibirFormularioRSO(){document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');document.getElementById('caixa-formulario-rso')?.classList.remove('hidden');}
                 function exibirFormularioGuincho(){document.getElementById('caixa-formulario-rso')?.classList.add('hidden');document.getElementById('caixa-formulario-guincho')?.classList.remove('hidden');}
                 function cancelarRSO(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-operacional')?.reset();document.getElementById('caixa-formulario-rso')?.classList.add('hidden');}}
-                function cancelarGuincho(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-guincho')?.reset();document.getElementById('gui-preview-img')?.classList.add('hidden');document.getElementById('gui-foto-base64').value="";document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');}}
-                function processarFotoVeiculo(input){if(input.files?.[0]){const leitor=new FileReader();leitor.onload=e=>{document.getElementById('gui-foto-base64').value=e.target.result;const p=document.getElementById('gui-preview-img');p.src=e.target.result;p.classList.remove('hidden');};leitor.readAsDataURL(input.files[0]);}}
+                function cancelarGuincho(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-guincho')?.reset();document.getElementById('gui-preview-img')?.classList.add('hidden');document.getElementById('gui-foto-base64').value="";if(document.getElementById('gui-paste-status')) document.getElementById('gui-paste-status').textContent="";document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');}}
+                function aplicarFotoGuinchoArquivo(file){
+                    if(!file || !file.type?.startsWith('image/')) return;
+                    const leitor=new FileReader();
+                    leitor.onload=e=>{
+                        const foto=e.target.result;
+                        document.getElementById('gui-foto-base64').value=foto;
+                        const p=document.getElementById('gui-preview-img');
+                        p.src=foto;
+                        p.classList.remove('hidden');
+                        const status=document.getElementById('gui-paste-status');
+                        if(status) status.textContent='✅ Imagem anexada. Ela será enviada junto com o relatório de guincho.';
+                    };
+                    leitor.readAsDataURL(file);
+                }
+                function processarFotoVeiculo(input){if(input.files?.[0]) aplicarFotoGuinchoArquivo(input.files[0]);}
+                function colarPrintGuincho(event){
+                    const itens=event.clipboardData?.items || [];
+                    for(const item of itens){
+                        if(item.type && item.type.startsWith('image/')){
+                            const file=item.getAsFile();
+                            if(file){
+                                event.preventDefault();
+                                aplicarFotoGuinchoArquivo(file);
+                                return;
+                            }
+                        }
+                    }
+                }
+                document.addEventListener('paste', function(event){
+                    const area=document.getElementById('gui-paste-area');
+                    const form=document.getElementById('form-registro-guincho');
+                    if(!area || !form || document.getElementById('caixa-formulario-guincho')?.classList.contains('hidden')) return;
+                    const alvo=event.target;
+                    if(alvo===area || area.contains(alvo) || form.contains(alvo)){
+                        colarPrintGuincho(event);
+                    }
+                });
                 function publicarRelatorioRSO(event){
                     event.preventDefault();
                     const banco=lerJSON('bancoRelatoriosBPE',[]);
@@ -2046,7 +2101,7 @@ function removerPrintApreensao(indice){
                     banco.forEach(rel=>{
                         const card=document.createElement('div');card.className="boletim-item";card.style.cssText="background:#2c2c2e;padding:20px;border-radius:8px;margin-bottom:15px;position:relative;";
                         const btn=`<button onclick="deletarRelatorioPeloComando('${rel.id}')" style="position:absolute;top:15px;right:15px;background:#ff1744;border:0;color:#fff;padding:6px 12px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🗑️ EXCLUIR</button>`;
-                        if(rel.tipo==="RSO"||rel.batalhao){card.style.borderLeft="5px solid #0052cc";const eq=(rel.guarnicao||[]).map((h,i)=>`<br>• ${i+1}º Homem: ${h}`).join('');card.innerHTML=`${btn}<span style="color:#0052cc;font-weight:bold;font-size:12px;">📋 RSO por ${rel.policialCriador}</span><h4>VTR ${rel.prefixo} | Batalhão: ${rel.batalhao}</h4><p style="background:#1c1c1e;padding:10px;border-radius:6px;font-size:13px;"><strong>👥 GUARNIÇÃO:</strong>${eq}</p><p style="margin-top:10px;font-size:14px;white-space:pre-wrap;"><strong>📜 HISTÓRICO:</strong><br>${rel.historico}</p>`;}
+                        if(rel.tipo==="RSO"||rel.batalhao){card.style.borderLeft="5px solid #0052cc";const eq=(rel.guarnicao||[]).map((h,i)=>`<br>• ${i+1}º Homem: ${h}`).join('');card.innerHTML=`${btn}<span style="color:#0052cc;font-weight:bold;font-size:12px;">📋 RSO por ${rel.policialCriador||'Policial'}</span><h4>VTR ${rel.prefixo||'-'} | Batalhão: ${rel.batalhao||'-'}</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0;"><div style="background:#1c1c1e;padding:12px;border-radius:6px;border-left:3px solid #0052cc;"><strong>📄 BOPMs</strong><br><span style="font-size:20px;color:#5da9ff;font-weight:900;">${Number(rel.bopm)||0}</span> realizados</div><div style="background:#1c1c1e;padding:12px;border-radius:6px;border-left:3px solid #ff1744;"><strong>☠️ Óbitos</strong><br><span style="font-size:20px;color:#ff6b6b;font-weight:900;">${Number(rel.obitos)||0}</span> registrados</div></div><p style="background:#1c1c1e;padding:10px;border-radius:6px;font-size:13px;"><strong>👥 GUARNIÇÃO:</strong>${eq||'<br>• Não informada'}</p><p style="margin-top:10px;font-size:14px;white-space:pre-wrap;"><strong>📜 HISTÓRICO:</strong><br>${rel.historico||'-'}</p><p style="margin-top:10px;font-size:13px;color:#aeaea3;"><strong>📦 MATERIAIS:</strong> ${rel.materiais||'Nenhum material informado.'}</p>`;}
                         else{card.style.borderLeft="5px solid #ffcc00";const img=rel.foto?`<br><img src="${rel.foto}" style="max-height:150px;margin-top:10px;border-radius:6px;border:1px solid #ffcc00;">`:"";card.innerHTML=`${btn}<span style="color:#ffcc00;font-weight:bold;font-size:12px;">🚛 GUINCHO por ${rel.policialCriador}</span><h4>VEÍCULO: ${rel.veiculo} | PLACA: ${rel.placa}</h4><p style="font-size:13px;">👤 Dono: ${rel.dono} | Trajeto: ${rel.retirada} até ${rel.destino}</p><p style="margin-top:10px;"><strong>⚠️ INFRAÇÃO:</strong> ${rel.motivo}</p>${img}`;}
                         feed.appendChild(card);
                     });
@@ -2070,15 +2125,27 @@ function removerPrintApreensao(indice){
                     banco.unshift({id:Date.now(),policialId:document.getElementById('aus-id').value,nome:document.getElementById('aus-nome').value,inicio:document.getElementById('aus-data-inicio').value,fim:document.getElementById('aus-data-fim').value,motivo:document.getElementById('aus-motivo').value});
                     salvarJSON('bancoAusenciasBPE',banco);document.getElementById('form-registro-ausencia').reset();document.getElementById('caixa-formulario-ausencia').classList.add('hidden');renderizarMuralAusencias();verificarStatusAusenciaUsuario();renderizarHierarquiaGeral();alert("Licença protocolada!");
                 }
+                function limparAusenciasExpiradas(){
+                    const banco=lerJSON('bancoAusenciasBPE',[]);
+                    const hoje=new Date(); hoje.setHours(0,0,0,0);
+                    const ativos=banco.filter(a=>{
+                        const fim=new Date(String(a?.fim||'')+'T23:59:59');
+                        return !isNaN(fim) && fim >= hoje;
+                    });
+                    if(ativos.length!==banco.length) salvarJSON('bancoAusenciasBPE',ativos);
+                    return ativos;
+                }
+
                 function renderizarMuralAusencias(){
                     const feed=document.getElementById('feed-mural-ausencias');if(!feed)return;
-                    const banco=lerJSON('bancoAusenciasBPE',[]);
-                    if(!banco.length){feed.innerHTML='<p class="sem-registro">Nenhuma ausência registrada.</p>';return;}
+                    const banco=limparAusenciasExpiradas();
+                    if(!banco.length){feed.innerHTML='<p class="sem-registro">Nenhuma ausência registrada no momento.</p>';return;}
                     feed.innerHTML="";
                     banco.forEach(aus=>{
                         const wrap=document.createElement('div');wrap.className="boletim-item";wrap.style.cssText="background:#2c2c2e;padding:20px;border-radius:8px;border-left:5px solid #ff6b00;margin-bottom:15px;position:relative;";
                         const btn=`<button onclick="deletarAusenciaJustibilidade('${aus.id}')" style="position:absolute;top:15px;right:15px;background:#ff1744;border:0;color:#fff;padding:6px 12px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🗑️ EXCLUIR</button>`;
-                        wrap.innerHTML=`${btn}<span style="color:#ff6b00;font-weight:bold;font-size:12px;">📅 LICENÇA</span><h4>${String(aus.nome||'POLICIAL').toUpperCase()} (ID: ${aus.policialId})</h4><p style="font-size:13px;color:#8e8e93;">⏳ Período: ${aus.inicio} até ${aus.fim}</p><p style="margin-top:10px;font-size:14px;background:#1c1c1e;padding:12px;border-radius:6px;white-space:pre-wrap;"><strong>📝 MOTIVO:</strong><br>${aus.motivo}</p>`;
+                        const ativa=obterAusenciaAtivaDoPolicial({id:aus.policialId,nome:aus.nome},banco);
+                        wrap.innerHTML=`${btn}<span style="color:#ff6b00;font-weight:bold;font-size:12px;">📅 LICENÇA / AFASTAMENTO ${ativa?'• ATIVO':''}</span><h4>${String(aus.nome||'POLICIAL').toUpperCase()} (ID: ${aus.policialId})</h4><p style="font-size:13px;color:#8e8e93;">⏳ Período: ${aus.inicio} até ${aus.fim}</p><p style="margin-top:10px;font-size:14px;background:#1c1c1e;padding:12px;border-radius:6px;white-space:pre-wrap;"><strong>📝 MOTIVO:</strong><br>${aus.motivo||'Não informado'}</p>`;
                         feed.appendChild(wrap);
                     });
                 }
@@ -2091,13 +2158,17 @@ function removerPrintApreensao(indice){
                     renderizarMuralAusencias();verificarStatusAusenciaUsuario();renderizarHierarquiaGeral();renderizarBoletinsECommunicados();alert("Licença anulada!");
                 }
                 function verificarStatusAusenciaUsuario(){
-                    const banco=lerJSON('bancoAusenciasBPE',[]);
+                    const banco=limparAusenciasExpiradas();
+                    const pm=obterUsuarioAtualBanco();
                     const id=String(localStorage.getItem('idLogado')||'');
+                    const nome=normalizarTexto(localStorage.getItem('usuarioLogado')||'');
                     const userBadge=document.querySelector('.user-badge');if(!userBadge)return;
                     document.getElementById('legenda-ausente-vtr')?.remove();
-                    const hoje=new Date();hoje.setHours(0,0,0,0);
-                    const aus=banco.find(a=>String(a.policialId)===id&&hoje>=new Date(a.inicio+'T00:00:00')&&hoje<=new Date(a.fim+'T00:00:00'));
-                    if(aus){const label=document.createElement('span');label.id='legenda-ausente-vtr';label.textContent='[AUSÊNCIA JUSTIFICADA]';label.style.cssText='color:#ff1744;font-size:11px;font-weight:bold;margin-top:2px;display:block;';userBadge.appendChild(label);}
+                    const alvo=pm||{id,nome,usuario:nome};
+                    const aus=obterAusenciaAtivaDoPolicial(alvo,banco);
+                    if(aus){
+                        const label=document.createElement('span');label.id='legenda-ausente-vtr';label.textContent='⚠️ AFASTADO • AUSÊNCIA JUSTIFICADA';label.title=`Período: ${aus.inicio} até ${aus.fim}`;label.style.cssText='color:#ff1744;font-size:11px;font-weight:900;margin-top:4px;display:block;background:rgba(255,23,68,.08);padding:3px 6px;border-radius:4px;';userBadge.appendChild(label);
+                    }
                 }
 
                 function podeExcluirConteudo() {
@@ -2477,6 +2548,36 @@ function removerPrintApreensao(indice){
                     // O logout nunca apaga dados do Supabase. Apenas encerra a sessão local.
                     window.location.replace('./index.html');
                 }
+                // Navegação final de segurança: garante que todas as abas sejam exibidas e renderizadas.
+                window.navegarAba = function(abaNome){
+                    try {
+                        if(!usuarioTemAcessoOperacional() && abaNome!=='acesso'){ aplicarBloqueioAcesso(); alert('🔒 Seu acesso ainda não foi liberado pelo Alto Comando.'); return; }
+                        if(abaNome==='coronel' && !usuarioEhAltoComando()){ alert('🔒 Acesso negado. Esta área é exclusiva do Alto Comando.'); return; }
+                        document.querySelectorAll('.aba-conteudo').forEach(el=>{ el.classList.add('hidden'); el.style.setProperty('display','none','important'); el.style.visibility='hidden'; });
+                        document.querySelectorAll('.sidebar-menu .menu-btn').forEach(b=>b.classList.remove('active'));
+                        const alvo=document.getElementById('content-'+abaNome);
+                        if(!alvo){ console.error('[BPE] Conteúdo não encontrado:',abaNome); return; }
+                        alvo.classList.remove('hidden'); alvo.style.setProperty('display','block','important'); alvo.style.visibility='visible'; alvo.style.opacity='1';
+                        document.getElementById('btn-menu-'+abaNome)?.classList.add('active');
+                        const fns={
+                            inicio:()=>{renderizarBoletinsECommunicados();renderizarMuralHerois();},
+                            herois:renderizarMuralHerois,
+                            'rankings-aba':atualizarTabelasGerais,
+                            ponto:atualizarTabelasGerais,
+                            apreensoes:()=>{renderizarHistoricoApreensoes();atualizarTabelasGerais();atualizarFilaApreensoes();},
+                            relatorios:renderizarMuralRSO,
+                            ausencias:()=>{renderizarMuralAusencias();verificarStatusAusenciaUsuario();renderizarHierarquiaGeral();},
+                            historia:renderizarHistoriaBPE,
+                            necroteca:renderizarNecroteca,
+                            hierarquia:()=>{renderizarHierarquiaGeral();verificarStatusAusenciaUsuario();},
+                            dados:carregarDadosPessoais,
+                            coronel:()=>{renderizarBoletinsECommunicados();renderizarSolicitacoesAcesso();renderizarPainelApagarTudo();renderizarMuralHerois();renderizarAdminHerois();renderizarNecroteca();renderizarHistoriaBPE();renderizarMuralRSO();renderizarMuralAusencias();renderizarHierarquiaGeral();}
+                        };
+                        if(fns[abaNome]) fns[abaNome]();
+                        requestAnimationFrame(()=>{const m=document.querySelector('.main-content');if(m)m.scrollTop=0;});
+                    }catch(e){ console.error('[BPE] Falha ao abrir menu '+abaNome,e); alert('⚠️ Não foi possível carregar este menu. Abra o console para ver o erro.'); }
+                };
+                document.addEventListener('DOMContentLoaded',()=>{ setTimeout(()=>{ try{verificarStatusAusenciaUsuario();renderizarHierarquiaGeral();}catch(e){console.error(e);} },250); });
             </script>
             <div class="site-credit">Site criado por Palmeira • 20/08/2026</div>
         </main>
