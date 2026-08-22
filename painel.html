@@ -324,7 +324,7 @@
                                     <div class="sem-registro">Nenhum print aguardando envio.</div>
                                 </div>
                                 <button id="btn-enviar-apreensoes" type="button" class="btn-ponto iniciar" style="width:100%;margin-top:15px;" onclick="enviarApreensoesPendentes()" disabled>📤 ENVIAR APREENSÕES</button>
-                                <p style="margin-top:12px;color:#aaa;font-size:13px;">O ranking azul conta cada tipo de objeto identificado no print (ex.: 2 maconhas + 3 armas = 2 objetos). O montante amarelo soma as quantidades dos materiais.</p>
+                                <p style="margin-top:12px;color:#aaa;font-size:13px;">Depois que o primeiro print for adicionado, informe manualmente os materiais daquele print. Ex.: <strong>20 maconha, 10 maconhas, 1 pistola</strong>. O sistema normaliza singular/plural, acumula as quantidades no montante amarelo e conta os tipos de material de cada print no ranking azul.</p>
                             </div>
                         </div>
                     </div>
@@ -1703,339 +1703,174 @@
                 }
 
                 // ==============================
-                // APREENSÕES / OCR + ÁREA DE COLAGEM
+                // APREENSÕES / FILA DE PRINTS + MATERIAIS INFORMADOS MANUALMENTE
                 // ==============================
                 let printsApreensaoPendentes = [];
-                let resultadosApreensaoPendentes = [];
 
-                function normalizarItemOCR(nome){
-                    return String(nome || '')
+                // Normaliza singular/plural e pequenas variações de escrita sem depender do OCR.
+                function normalizarMaterialDigitado(nome){
+                    let n = String(nome || '')
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+                        .toLowerCase()
+                        .replace(/[^a-z0-9\s_-]/g,' ')
                         .replace(/\s+/g,' ')
-                        .replace(/^[-:•|]+|[-:•|]+$/g,'')
-                        .replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ]+$/g,'')
                         .trim();
+
+                    if(!n) return '';
+
+                    // Variações comuns de materiais de RP.
+                    const aliases = {
+                        'maconhas':'maconha', 'marihuanas':'maconha', 'maconha':'maconha',
+                        'armas':'arma', 'arma':'arma', 'pistolas':'pistola', 'pistola':'pistola',
+                        'municoes':'municao', 'municao':'municao', 'municoes':'municao',
+                        'fuzis':'fuzil', 'fuzil':'fuzil', 'rifles':'rifle', 'rifle':'rifle',
+                        'carregadores':'carregador', 'carregador':'carregador',
+                        'coletes':'colete', 'colete':'colete',
+                        'cocainas':'cocaina', 'cocaina':'cocaina',
+                        'cracks':'crack', 'crack':'crack',
+                        'dinheiros':'dinheiro', 'dinheiro':'dinheiro'
+                    };
+                    if(aliases[n]) return aliases[n];
+
+                    // Regras gerais para plural simples e alguns plurais frequentes em português.
+                    if(n.endsWith('oes') && n.length > 4) n = n.slice(0,-3) + 'ao';
+                    else if(n.endsWith('aes') && n.length > 4) n = n.slice(0,-3) + 'al';
+                    else if(n.endsWith('eis') && n.length > 4) n = n.slice(0,-3) + 'el';
+                    else if(n.endsWith('ais') && n.length > 4) n = n.slice(0,-3) + 'al';
+                    else if(n.endsWith('is') && n.length > 4) n = n.slice(0,-2) + 'l';
+                    else if(n.endsWith('s') && n.length > 3) n = n.slice(0,-1);
+
+                    return n.trim();
                 }
 
-                function nomeItemPareceValido(item){
-                    const texto = normalizarItemOCR(item);
-                    if(texto.length < 2 || !/[A-Za-zÀ-ÿ]/.test(texto)) return false;
-                    const ignorados = /^(id|total|quantidade|qtd|item|invent[aá]rio|peso|valor|pre[cç]o|dinheiro|saldo|capacidade|slot|espa[cç]o|unidades?|und|qtd|x)$/i;
-                    if(ignorados.test(texto)) return false;
-                    if(/^(abrir|fechar|usar|descartar|equipar|voltar|sair|confirmar|cancelar|invent[aá]rio|escaneando|enviado)$/i.test(texto)) return false;
-                    return true;
+                function rotuloMaterial(nome){
+                    const n = normalizarMaterialDigitado(nome);
+                    if(!n) return '';
+                    return n.charAt(0).toUpperCase() + n.slice(1);
                 }
 
-                function adicionarResultadoMaterial(lista, item, qtd){
-                    item = normalizarItemOCR(item);
-                    qtd = parseInt(qtd,10);
-                    if(!nomeItemPareceValido(item) || !Number.isFinite(qtd) || qtd <= 0 || qtd > 100000) return;
-                    // Remove lixo típico de OCR no fim/início do nome.
-                    item = item.replace(/[|:;,.]+$/g,'').replace(/^[|:;,.]+/g,'').trim();
-                    if(item.length >= 2) lista.push({item, qtd});
-                }
+                // Aceita, por exemplo:
+                // 20 maconha, 10 maconhas, 1 pistola
+                // 20 maconha 10 maconhas 1 pistola
+                // maconha 20; pistolas 1
+                function interpretarMateriaisDigitados(texto){
+                    const encontrados = [];
+                    const bruto = String(texto || '').replace(/\r/g,'').trim();
+                    if(!bruto) return encontrados;
 
-                function extrairMateriaisDoOCR(texto){
-                    const resultados = [];
-                    const original = String(texto || '').replace(/\r/g,'');
-                    const linhas = original.split('\n')
-                        .map(l => l.replace(/[|]/g,' ').replace(/\s+/g,' ').trim())
+                    const partes = bruto
+                        .split(/[\n,;]+/)
+                        .map(x => x.trim())
                         .filter(Boolean);
 
-                    function tentar(linha, item, qtd){
-                        if(!item || qtd == null) return;
-                        // Remove marcadores comuns do inventário/OCR sem limitar os nomes possíveis.
-                        item = String(item)
-                            .replace(/^[\s\[\]{}()<>•·|:;,_\-–—]+|[\s\[\]{}()<>•·|:;,_\-–—]+$/g,'')
-                            .replace(/\s+/g,' ').trim();
-                        adicionarResultadoMaterial(resultados, item, qtd);
+                    function adicionar(nome,qtd){
+                        const item = normalizarMaterialDigitado(nome);
+                        const quantidade = parseInt(qtd,10);
+                        if(!item || !Number.isFinite(quantidade) || quantidade <= 0 || quantidade > 100000) return;
+                        const existente = encontrados.find(x => x.chave === item);
+                        if(existente) existente.qtd += quantidade;
+                        else encontrados.push({chave:item, item:rotuloMaterial(item), qtd:quantidade});
                     }
 
-                    // 1) Formatos explícitos: ITEM x20, x20 ITEM, ITEM 20, 20 ITEM.
-                    const padroes = [
-                        /([^\n]{2,120}?)\s*[x×*]\s*(\d{1,6})\b/gi,
-                        /\b[x×*]\s*(\d{1,6})\s*([^\n]{2,120}?)(?=\s{2,}|$)/gi,
-                        /([^\n]{2,120}?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)?\b/gi,
-                        /\b(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)\s+([^\n]{2,120})/gi,
-                        /\b(\d{1,6})\s*[x×*]\s*([^\n]{2,120}?)(?=\s{2,}|$)/gi
-                    ];
-                    for(const regex of padroes){
-                        let m;
-                        while((m = regex.exec(original)) !== null){
-                            if(/^\s*\d/.test(m[1])) tentar(m[0], m[2], m[1]);
-                            else if(/^\s*[x×*]\s*\d/.test(m[0])) tentar(m[0], m[2], m[1]);
-                            else tentar(m[0], m[1], m[2]);
+                    for(const parteOriginal of partes){
+                        let parte = parteOriginal.replace(/\s+/g,' ').trim();
+                        if(!parte) continue;
+
+                        // Se houver vários itens na mesma linha sem vírgula, separa pelo próximo número.
+                        const blocos = [];
+                        const reBloco = /(\d{1,6})\s*(?:x|×)?\s*([^\d]+?)(?=\s+\d{1,6}\s*(?:x|×)?\s*|$)/gi;
+                        let m, encontrouBlocos = false;
+                        while((m = reBloco.exec(parte)) !== null){
+                            encontrouBlocos = true;
+                            blocos.push({qtd:m[1], nome:m[2]});
                         }
+
+                        if(encontrouBlocos){
+                            blocos.forEach(b => adicionar(b.nome,b.qtd));
+                            continue;
+                        }
+
+                        // quantidade + item
+                        let m1 = parte.match(/^(\d{1,6})\s*(?:x|×)?\s*(.+)$/i);
+                        if(m1){ adicionar(m1[2],m1[1]); continue; }
+
+                        // item + quantidade
+                        let m2 = parte.match(/^(.+?)\s*(?:x|×)?\s*(\d{1,6})$/i);
+                        if(m2){ adicionar(m2[1],m2[2]); continue; }
+
+                        // Se o policial digitou apenas o nome, não inventa quantidade.
+                        // A quantidade é obrigatória para o envio.
                     }
 
-                    // 2) Inventários que colocam o nome e a quantidade em linhas separadas.
-                    for(let i=0;i<linhas.length;i++){
-                        const linha = linhas[i];
-                        let m = linha.match(/^(.+?)\s*[x×*]\s*(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
-                        if(m){ tentar(linha,m[1],m[2]); continue; }
-                        m = linha.match(/^(\d{1,6})\s*[x×*]\s*(.+)$/i);
-                        if(m){ tentar(linha,m[2],m[1]); continue; }
-                        m = linha.match(/^(.+?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)?$/i);
-                        if(m){ tentar(linha,m[1],m[2]); continue; }
-                        m = linha.match(/^(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)\s+(.+)$/i);
-                        if(m){ tentar(linha,m[2],m[1]); continue; }
+                    return encontrados;
+                }
 
-                        // ITEM na linha anterior/posterior a uma linha contendo somente a quantidade.
-                        const qtdSozinha = linha.match(/^(?:x\s*)?(\d{1,6})$/i);
-                        if(qtdSozinha){
-                            const qtd = qtdSozinha[1];
-                            if(i>0) tentar(linhas[i-1],linhas[i-1],qtd);
-                            if(i<linhas.length-1) tentar(linhas[i+1],linhas[i+1],qtd);
-                        }
-                    }
+                function atualizarPreviewMateriaisApreensao(){
+                    const preview = document.getElementById('preview-materiais-apreensao');
+                    if(!preview) return;
 
-                    // 3) Fallback por tokens: muitos inventários renderizam "NOME" e "xN"
-                    // como blocos separados. Procuramos o token numérico e associamos os textos
-                    // próximos, preservando mais de uma palavra no nome do item.
-                    const tokens = original.replace(/\r/g,' ').split(/\s+/).filter(Boolean);
-                    for(let i=0;i<tokens.length;i++){
-                        const tok = tokens[i].replace(/[\[\]{}()]/g,'');
-                        const qm = tok.match(/^[x×*]?(\d{1,6})[.,]?$/i) || tok.match(/^(\d{1,6})[x×*]$/i);
-                        if(!qm) continue;
-                        const qtd = parseInt(qm[1],10);
-                        let antes=[];
-                        for(let j=Math.max(0,i-4);j<i;j++){
-                            const t=tokens[j].replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ0-9]+$/g,'');
-                            if(/[A-Za-zÀ-ÿ]/.test(t)) antes.push(t);
-                        }
-                        if(antes.length) tentar('',antes.join(' '),qtd);
-                        let depois=[];
-                        for(let j=i+1;j<=Math.min(tokens.length-1,i+4);j++){
-                            const t=tokens[j].replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ0-9]+$/g,'');
-                            if(/[A-Za-zÀ-ÿ]/.test(t)) depois.push(t);
-                            else break;
-                        }
-                        if(depois.length) tentar('',depois.join(' '),qtd);
-                    }
-
-                    // Junta nomes repetidos no mesmo print.
-                    const agrupado = {};
-                    resultados.forEach(r => {
-                        const chave = normalizarTexto(r.item);
-                        if(!agrupado[chave]) agrupado[chave] = {item:r.item, qtd:0};
-                        agrupado[chave].qtd += r.qtd;
+                    const acumulado = {};
+                    printsApreensaoPendentes.forEach(print => {
+                        (print.materiais || []).forEach(m => {
+                            acumulado[m.chave] = (acumulado[m.chave] || 0) + m.qtd;
+                        });
                     });
-                    return Object.values(agrupado);
-                }
 
-                async function prepararImagemOCR(file, modo='contraste'){
-                    return new Promise((resolve, reject) => {
-                        const img = new Image();
-                        const url = URL.createObjectURL(file);
-                        img.onload = () => {
-                            try {
-                                // Aumenta bastante a imagem para ajudar o OCR em inventários pequenos.
-                                const maior = Math.max(img.width, img.height);
-                                const escala = Math.min(4, Math.max(2.5, 2400 / maior));
-                                const w = Math.max(1, Math.round(img.width * escala));
-                                const h = Math.max(1, Math.round(img.height * escala));
-                                const canvas = document.createElement('canvas');
-                                canvas.width = w; canvas.height = h;
-                                const ctx = canvas.getContext('2d', {willReadFrequently:true});
-                                ctx.imageSmoothingEnabled = true;
-                                ctx.imageSmoothingQuality = 'high';
-                                ctx.drawImage(img, 0, 0, w, h);
-
-                                if(modo !== 'original'){
-                                    const dados = ctx.getImageData(0,0,w,h);
-                                    for(let i=0;i<dados.data.length;i+=4){
-                                        const r=dados.data[i], g=dados.data[i+1], b=dados.data[i+2];
-                                        let v = 0.299*r + 0.587*g + 0.114*b;
-                                        if(modo === 'binario'){
-                                            // Binarização simples para letras claras/escuras.
-                                            v = v > 150 ? 255 : 0;
-                                        } else {
-                                            v = Math.max(0, Math.min(255, (v-128)*1.8+128));
-                                        }
-                                        dados.data[i]=dados.data[i+1]=dados.data[i+2]=v;
-                                    }
-                                    ctx.putImageData(dados,0,0);
-                                }
-                                canvas.toBlob(blob => {
-                                    URL.revokeObjectURL(url);
-                                    blob ? resolve(blob) : reject(new Error('Falha ao preparar imagem'));
-                                }, 'image/png');
-                            } catch(e){ URL.revokeObjectURL(url); reject(e); }
-                        };
-                        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
-                        img.src = url;
-                    });
-                }
-
-                async function executarOCRRobusto(file){
-                    const leituras = [];
-                    const entradas = [
-                        {img:file, psm:11, modo:'original'},
-                        {img:await prepararImagemOCR(file,'contraste'), psm:11, modo:'contraste'},
-                        {img:await prepararImagemOCR(file,'contraste'), psm:6, modo:'contraste'},
-                        {img:await prepararImagemOCR(file,'binario'), psm:11, modo:'binario'},
-                        {img:await prepararImagemOCR(file,'binario'), psm:6, modo:'binario'}
-                    ];
-
-                    for(const entrada of entradas){
-                        for(const lang of ['por+eng','eng']){
-                            try{
-                                const r = await Tesseract.recognize(entrada.img, lang, {
-                                    tessedit_pageseg_mode: String(entrada.psm),
-                                    preserve_interword_spaces: '1'
-                                });
-                                if(r?.data?.text){
-                                    leituras.push({
-                                        text:r.data.text,
-                                        words:Array.isArray(r.data.words) ? r.data.words : [],
-                                        confidence:Number(r.data.confidence)||0,
-                                        modo:entrada.modo,
-                                        psm:entrada.psm,
-                                        lang
-                                    });
-                                }
-                            }catch(e){
-                                console.warn(`[BPE OCR] ${lang}/psm${entrada.psm}/${entrada.modo} falhou`,e);
-                            }
-                        }
+                    const arr = Object.keys(acumulado);
+                    if(!arr.length){
+                        preview.innerHTML = '<div style="color:#aaa;padding:10px 0;">📦 O acumulado dos materiais aparecerá aqui conforme você preencher os prints.</div>';
+                        return;
                     }
 
-                    if(!leituras.length) return {text:'',words:[],confidence:0};
-                    // Escolhe a leitura que realmente encontrou mais estrutura numérica,
-                    // em vez de juntar todas as leituras e duplicar itens.
-                    const pontuar = l => {
-                        const numeros = (l.words||[]).filter(w=>/^(?:x|×|\*)?\d{1,6}[.,]?$/.test(String(w.text||'').trim())).length;
-                        const linhas = String(l.text||'').split('\n').filter(x=>x.trim()).length;
-                        return numeros*100 + Math.min(linhas,80) + (l.confidence/100);
-                    };
-                    leituras.sort((a,b)=>pontuar(b)-pontuar(a));
-                    return leituras[0];
-                }
-
-                function palavrasOCRComPosicao(leitura){
-                    const words=(leitura?.words||[]).map(w=>({
-                        text:String(w.text||'').trim(),
-                        conf:Number(w.confidence)||0,
-                        x:Number(w.bbox?.x0)||0,
-                        y:Number(w.bbox?.y0)||0,
-                        x1:Number(w.bbox?.x1)||0,
-                        y1:Number(w.bbox?.y1)||0
-                    })).filter(w=>w.text && w.conf>=15);
-                    // Agrupa por linha visual. Isso é muito mais confiável para inventários
-                    // do que tentar adivinhar pela ordem do texto puro do OCR.
-                    const linhas=[];
-                    for(const w of words.sort((a,b)=>a.y-b.y||a.x-b.x)){
-                        let linha=linhas.find(l=>Math.abs(l.y-w.y)<=Math.max(12,(w.y1-w.y)*0.65));
-                        if(!linha){linha={y:w.y,words:[]};linhas.push(linha);}
-                        linha.words.push(w);
-                    }
-                    linhas.forEach(l=>l.words.sort((a,b)=>a.x-b.x));
-                    return linhas;
-                }
-
-                function extrairMateriaisDaLeituraOCR(leitura){
-                    const encontrados=[];
-                    const linhas=palavrasOCRComPosicao(leitura);
-                    const lixo=/^(x|×|id|total|qtd|quantidade|peso|valor|preço|dinheiro|saldo|capacidade|slot|espaço|unidades?|und|inventário|inventario|menu|usar|equipar|descartar|fechar|abrir|sair|voltar|confirmar|cancelar)$/i;
-                    const limpar=t=>String(t||'').replace(/^[^A-Za-zÀ-ÿ0-9]+|[^A-Za-zÀ-ÿ0-9]+$/g,'').replace(/\s+/g,' ').trim();
-                    const adicionar=(nome,qtd)=>{
-                        nome=limpar(nome); qtd=parseInt(qtd,10);
-                        if(!nome || nome.length<2 || !/[A-Za-zÀ-ÿ]/.test(nome) || lixo.test(nome)) return;
-                        if(!Number.isFinite(qtd)||qtd<=0||qtd>100000) return;
-                        // Não aceita nomes formados apenas por UI comum do inventário.
-                        if(/^(x|qtd|item|total|slot|peso|valor|invent[aá]rio)$/i.test(nome)) return;
-                        encontrados.push({item:nome,qtd});
-                    };
-
-                    for(const linha of linhas){
-                        const ws=linha.words;
-                        for(let i=0;i<ws.length;i++){
-                            const t=ws[i].text.replace(/[.,]$/,'');
-                            let m=t.match(/^[x×*](\d{1,6})$/i);
-                            let numero=m?parseInt(m[1],10):null;
-                            let indiceNum=i;
-                            let formatoX=!!m;
-                            if(numero===null){
-                                m=t.match(/^(\d{1,6})[x×*]$/i);
-                                if(m){numero=parseInt(m[1],10);indiceNum=i;formatoX=true;}
-                            }
-                            if(numero===null){
-                                m=t.match(/^(\d{1,6})$/);
-                                if(m){numero=parseInt(m[1],10);indiceNum=i;}
-                            }
-                            if(numero===null) continue;
-
-                            // Ignora números muito prováveis de serem IDs/menus/valores.
-                            if(!formatoX && numero>9999) continue;
-
-                            const antes=[];
-                            for(let j=indiceNum-1;j>=0 && antes.length<6;j--){
-                                const z=limpar(ws[j].text);
-                                if(!z || lixo.test(z)) break;
-                                if(/^\d+$/.test(z)) break;
-                                antes.unshift(z);
-                            }
-                            const depois=[];
-                            for(let j=indiceNum+1;j<ws.length && depois.length<6;j++){
-                                const z=limpar(ws[j].text);
-                                if(!z || lixo.test(z)) break;
-                                if(/^\d+$/.test(z)) break;
-                                depois.push(z);
-                            }
-
-                            // Primeiro tenta o nome imediatamente próximo ao número.
-                            if(antes.length) adicionar(antes.join(' '),numero);
-                            else if(depois.length) adicionar(depois.join(' '),numero);
-                        }
-                    }
-
-                    // Segunda tentativa: texto puro, útil quando o Tesseract não entrega bbox.
-                    if(!encontrados.length){
-                        const texto=String(leitura?.text||'').replace(/\r/g,'');
-                        for(const linha0 of texto.split('\n')){
-                            const linha=linha0.replace(/\s+/g,' ').trim();
-                            if(!linha) continue;
-                            let m=linha.match(/^(.{2,80}?)\s*[x×*]\s*(\d{1,6})\b/i);
-                            if(m) adicionar(m[1],m[2]);
-                            m=linha.match(/^(\d{1,6})\s*[x×*]\s*(.{2,80})$/i);
-                            if(m) adicionar(m[2],m[1]);
-                            m=linha.match(/^(.{2,80}?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
-                            if(m) adicionar(m[1],m[2]);
-                        }
-                    }
-
-                    const agrupado={};
-                    encontrados.forEach(r=>{
-                        const chave=normalizarTexto(r.item);
-                        if(!agrupado[chave]) agrupado[chave]={item:r.item,qtd:0};
-                        agrupado[chave].qtd+=r.qtd;
-                    });
-                    return Object.values(agrupado);
-                }
-
-                function extrairMateriaisDoOCR(leitura){
-                    // Mantém a função antiga como ponto de compatibilidade, mas agora usa
-                    // leitura por posição das palavras do Tesseract.
-                    if(leitura && typeof leitura === 'object' && (leitura.words || leitura.text)){
-                        return extrairMateriaisDaLeituraOCR(leitura);
-                    }
-                    return [];
+                    preview.innerHTML = '<strong style="color:#ffcc00;">📦 ACUMULADO DA POSTAGEM</strong><div style="margin-top:8px;">' +
+                        arr.map(k => `<div style="padding:4px 0;">${rotuloMaterial(k)}: <strong>${acumulado[k]}</strong></div>`).join('') +
+                        '</div>';
                 }
 
                 function atualizarFilaApreensoes(){
                     const box = document.getElementById('fila-prints-apreensao');
                     const btn = document.getElementById('btn-enviar-apreensoes');
                     if(!box) return;
+
                     if(!printsApreensaoPendentes.length){
                         box.innerHTML = '<div class="sem-registro">Nenhum print aguardando envio.</div>';
+                        const preview = document.getElementById('preview-materiais-apreensao');
+                        if(preview) preview.remove();
                     } else {
-                        box.innerHTML = printsApreensaoPendentes.map((p,i)=>
-                            `<div style="padding:10px 12px;border-bottom:1px solid #333;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
-                                <span>📸 Print ${i+1} — ${p.resultados.length ? p.resultados.map(r=>`${r.item}: ${r.qtd}`).join(' • ') : 'OCR sem identificação automática — revise o print antes de enviar'}</span>
-                                <button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button>
-                            </div>`
-                        ).join('');
+                        box.innerHTML = printsApreensaoPendentes.map((p,i) => {
+                            const materiais = (p.materiais || []);
+                            const resumo = materiais.length
+                                ? materiais.map(m => `${m.item}: ${m.qtd}`).join(' • ')
+                                : 'Nenhum material informado ainda.';
+                            return `<div style="padding:12px;border-bottom:1px solid #333;">
+                                <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+                                    <strong>📸 Print ${i+1}</strong>
+                                    <button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button>
+                                </div>
+                                <label style="display:block;margin-top:10px;color:#ddd;font-weight:bold;">Materiais apreendidos neste print:</label>
+                                <textarea id="materiais-print-${i}" rows="2" style="width:100%;box-sizing:border-box;margin-top:6px;padding:10px;background:#111;color:#fff;border:1px solid #555;border-radius:8px;resize:vertical;" placeholder="Ex.: 20 maconha, 10 maconhas, 1 pistola" oninput="atualizarMateriaisDoPrint(${i}, this.value)">${p.textoMateriais || ''}</textarea>
+                                <div style="margin-top:6px;color:#aaa;font-size:12px;">O sistema junta automaticamente singular/plural. Ex.: <strong>20 maconha + 10 maconhas = 30 maconha</strong>.</div>
+                                <div style="margin-top:7px;color:#ddd;font-size:13px;">Resumo deste print: ${resumo}</div>
+                            </div>`;
+                        }).join('');
+
+                        if(!document.getElementById('preview-materiais-apreensao')){
+                            const preview = document.createElement('div');
+                            preview.id = 'preview-materiais-apreensao';
+                            preview.style.cssText = 'margin-top:12px;padding:12px;background:#1b1b1b;border:1px solid #555;border-radius:8px;';
+                            box.appendChild(preview);
+                        }
+                        atualizarPreviewMateriaisApreensao();
                     }
+
                     if(btn) btn.disabled = !printsApreensaoPendentes.length;
+                }
+
+                function atualizarMateriaisDoPrint(indice, texto){
+                    if(!printsApreensaoPendentes[indice]) return;
+                    printsApreensaoPendentes[indice].textoMateriais = texto;
+                    printsApreensaoPendentes[indice].materiais = interpretarMateriaisDigitados(texto);
+                    atualizarFilaApreensoes();
                 }
 
                 function removerPrintApreensao(indice){
@@ -2045,26 +1880,19 @@
 
                 async function processarImagemApreensao(file){
                     if(!file || !file.type || !file.type.startsWith('image/')) return;
-                    if(typeof Tesseract === 'undefined'){
-                        alert('❌ O leitor OCR não está disponível nesta página.');
-                        return;
-                    }
-                    const numero = printsApreensaoPendentes.length + 1;
-                    alert(`🤖 Lendo todos os itens do print ${numero} do inventário...`);
-                    try {
-                        const leitura = await executarOCRRobusto(file);
-                        const resultados = extrairMateriaisDoOCR(leitura);
-                        printsApreensaoPendentes.push({file, resultados, textoOCR:leitura?.text||'', confiancaOCR:leitura?.confidence||0});
-                        atualizarFilaApreensoes();
-                        if(resultados.length){
-                            alert(`✅ Print ${numero} lido. Foram identificados ${resultados.length} tipo(s) de material:\n\n${resultados.map(r=>`${r.item}: ${r.qtd}`).join('\n')}\n\nO print ficou aguardando envio.`);
-                        } else {
-                            alert(`⚠️ O OCR não conseguiu interpretar automaticamente os nomes/quantidades deste print.\n\nO print continua na fila. Você pode revisar e enviar, mas a contagem automática de materiais deste print não será inventada.`);
-                        }
-                    } catch(e) {
-                        console.error('[BPE OCR]', e);
-                        alert('❌ Não foi possível processar o print.');
-                    }
+
+                    // O print fica salvo na fila imediatamente. O preenchimento manual substitui
+                    // a dependência do OCR e evita falsos positivos/erros de leitura do inventário.
+                    printsApreensaoPendentes.push({
+                        file,
+                        materiais: [],
+                        textoMateriais: ''
+                    });
+                    atualizarFilaApreensoes();
+
+                    const numero = printsApreensaoPendentes.length;
+                    const campo = document.getElementById(`materiais-print-${numero-1}`);
+                    if(campo) campo.focus();
                 }
 
                 function adicionarPrintsApreensao(input){
@@ -2078,26 +1906,33 @@
                         return;
                     }
 
+                    // Todos os prints precisam ter pelo menos um material com quantidade válida.
+                    const semMaterial = printsApreensaoPendentes.findIndex(p => !(p.materiais || []).length);
+                    if(semMaterial >= 0){
+                        alert(`⚠️ Informe os materiais apreendidos no Print ${semMaterial+1}.\n\nExemplo: 20 maconha, 10 maconhas, 1 pistola.`);
+                        const campo = document.getElementById(`materiais-print-${semMaterial}`);
+                        if(campo) campo.focus();
+                        return;
+                    }
+
                     const rP = lerJSON('rankingApreensoesBPE',{});
                     const rM = lerJSON('topMateriaisBPE',{});
                     const pChave = `${localStorage.getItem('usuarioLogado')} (ID: ${localStorage.getItem('idLogado')})`;
 
-                    // AZUL: conta os TIPOS DE OBJETOS identificados em cada print.
-                    // Ex.: 1 print com 2 MACONHAS + 3 ARMAS = 2 objetos no ranking.
-                    // A quantidade de unidades não altera o ranking azul.
-                    // Se outro print tiver 1 ARMA = +1 objeto. Total = 3 objetos.
+                    // AZUL: cada TIPO DE MATERIAL presente em CADA PRINT vale 1 objeto.
+                    // Print 1: 2 maconhas + 3 armas = 2 objetos.
+                    // Print 2: 1 arma = +1 objeto. Total = 3 objetos.
                     const objetosIdentificados = printsApreensaoPendentes.reduce((total, print) => {
-                        return total + print.resultados.length;
+                        return total + (print.materiais || []).length;
                     }, 0);
                     rP[pChave] = (rP[pChave] || 0) + objetosIdentificados;
 
-                    // AMARELO: lê TODOS os itens identificados em TODOS os prints.
-                    // Ex.: um print com 20 maconhas + 2 armas + 15 munições alimenta os 3 materiais.
+                    // AMARELO: soma as quantidades, agrupando singular/plural e nomes equivalentes.
                     printsApreensaoPendentes.forEach(print => {
-                        print.resultados.forEach(r => {
-                            const chaveExistente = Object.keys(rM).find(k => normalizarTexto(k) === normalizarTexto(r.item));
-                            const chave = chaveExistente || r.item;
-                            rM[chave] = (rM[chave] || 0) + r.qtd;
+                        (print.materiais || []).forEach(m => {
+                            const chaveExistente = Object.keys(rM).find(k => normalizarMaterialDigitado(k) === m.chave);
+                            const chave = chaveExistente || m.item;
+                            rM[chave] = (rM[chave] || 0) + m.qtd;
                         });
                     });
 
@@ -2106,9 +1941,8 @@
 
                     const totalPrints = printsApreensaoPendentes.length;
                     const totalTipos = objetosIdentificados;
-                    const totalUnidades = printsApreensaoPendentes.reduce((s,p)=>s+p.resultados.reduce((t,r)=>t+r.qtd,0),0);
+                    const totalUnidades = printsApreensaoPendentes.reduce((s,p)=>s+(p.materiais||[]).reduce((t,r)=>t+r.qtd,0),0);
                     printsApreensaoPendentes = [];
-                    resultadosApreensaoPendentes = [];
                     atualizarFilaApreensoes();
                     atualizarTabelasGerais();
 
