@@ -1737,46 +1737,80 @@
                 function extrairMateriaisDoOCR(texto){
                     const resultados = [];
                     const original = String(texto || '').replace(/\r/g,'');
-                    const linhas = original.split('\n').map(l => l.replace(/[|]/g,' ').replace(/\s+/g,' ').trim()).filter(Boolean);
+                    const linhas = original.split('\n')
+                        .map(l => l.replace(/[|]/g,' ').replace(/\s+/g,' ').trim())
+                        .filter(Boolean);
 
-                    // O inventário pode aparecer em várias formas. Procuramos pares de item + quantidade
-                    // em TODO o texto, e não por uma lista fixa de drogas/armas.
+                    function tentar(linha, item, qtd){
+                        if(!item || qtd == null) return;
+                        // Remove marcadores comuns do inventário/OCR sem limitar os nomes possíveis.
+                        item = String(item)
+                            .replace(/^[\s\[\]{}()<>•·|:;,_\-–—]+|[\s\[\]{}()<>•·|:;,_\-–—]+$/g,'')
+                            .replace(/\s+/g,' ').trim();
+                        adicionarResultadoMaterial(resultados, item, qtd);
+                    }
+
+                    // 1) Formatos explícitos: ITEM x20, x20 ITEM, ITEM 20, 20 ITEM.
                     const padroes = [
-                        /([^\n]{2,100}?)\s*[x×*]\s*(\d{1,6})\b/gi,
-                        /\b(\d{1,6})\s*[x×*]\s*([^\n]{2,100}?)(?=\s{2,}|$)/gi,
-                        /([^\n]{2,100}?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?\b/gi,
-                        /\b(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)\s+([^\n]{2,100})/gi
+                        /([^\n]{2,120}?)\s*[x×*]\s*(\d{1,6})\b/gi,
+                        /\b[x×*]\s*(\d{1,6})\s*([^\n]{2,120}?)(?=\s{2,}|$)/gi,
+                        /([^\n]{2,120}?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)?\b/gi,
+                        /\b(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)\s+([^\n]{2,120})/gi,
+                        /\b(\d{1,6})\s*[x×*]\s*([^\n]{2,120}?)(?=\s{2,}|$)/gi
                     ];
                     for(const regex of padroes){
                         let m;
                         while((m = regex.exec(original)) !== null){
-                            if(/^\d/.test(m[1])) adicionarResultadoMaterial(resultados, m[2], m[1]);
-                            else adicionarResultadoMaterial(resultados, m[1], m[2]);
+                            if(/^\s*\d/.test(m[1])) tentar(m[0], m[2], m[1]);
+                            else if(/^\s*[x×*]\s*\d/.test(m[0])) tentar(m[0], m[2], m[1]);
+                            else tentar(m[0], m[1], m[2]);
                         }
                     }
 
-                    // Fallback por linha.
-                    linhas.forEach((linha, indice) => {
-                        let m;
-                        m = linha.match(/^(.+?)\s*[x×*]\s*(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
-                        if(m){ adicionarResultadoMaterial(resultados, m[1], m[2]); return; }
+                    // 2) Inventários que colocam o nome e a quantidade em linhas separadas.
+                    for(let i=0;i<linhas.length;i++){
+                        const linha = linhas[i];
+                        let m = linha.match(/^(.+?)\s*[x×*]\s*(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
+                        if(m){ tentar(linha,m[1],m[2]); continue; }
                         m = linha.match(/^(\d{1,6})\s*[x×*]\s*(.+)$/i);
-                        if(m){ adicionarResultadoMaterial(resultados, m[2], m[1]); return; }
-                        m = linha.match(/^(.+?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
-                        if(m){ adicionarResultadoMaterial(resultados, m[1], m[2]); return; }
-                        m = linha.match(/^(\d{1,6})\s+(?:un(?:idade)?s?|und|qtd)\s+(.+)$/i);
-                        if(m){ adicionarResultadoMaterial(resultados, m[2], m[1]); return; }
+                        if(m){ tentar(linha,m[2],m[1]); continue; }
+                        m = linha.match(/^(.+?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)?$/i);
+                        if(m){ tentar(linha,m[1],m[2]); continue; }
+                        m = linha.match(/^(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd|x)\s+(.+)$/i);
+                        if(m){ tentar(linha,m[2],m[1]); continue; }
 
-                        // Nome e quantidade em linhas vizinhas: ITEM / x20 ou x20 / ITEM.
-                        if(indice < linhas.length - 1 && /^x?\s*\d{1,6}$/i.test(linha)){
-                            const qtd = linha.match(/\d{1,6}/)?.[0];
-                            adicionarResultadoMaterial(resultados, linhas[indice + 1], qtd);
+                        // ITEM na linha anterior/posterior a uma linha contendo somente a quantidade.
+                        const qtdSozinha = linha.match(/^(?:x\s*)?(\d{1,6})$/i);
+                        if(qtdSozinha){
+                            const qtd = qtdSozinha[1];
+                            if(i>0) tentar(linhas[i-1],linhas[i-1],qtd);
+                            if(i<linhas.length-1) tentar(linhas[i+1],linhas[i+1],qtd);
                         }
-                        if(indice > 0 && /^x?\s*\d{1,6}$/i.test(linha)){
-                            const qtd = linha.match(/\d{1,6}/)?.[0];
-                            adicionarResultadoMaterial(resultados, linhas[indice - 1], qtd);
+                    }
+
+                    // 3) Fallback por tokens: muitos inventários renderizam "NOME" e "xN"
+                    // como blocos separados. Procuramos o token numérico e associamos os textos
+                    // próximos, preservando mais de uma palavra no nome do item.
+                    const tokens = original.replace(/\r/g,' ').split(/\s+/).filter(Boolean);
+                    for(let i=0;i<tokens.length;i++){
+                        const tok = tokens[i].replace(/[\[\]{}()]/g,'');
+                        const qm = tok.match(/^[x×*]?(\d{1,6})[.,]?$/i) || tok.match(/^(\d{1,6})[x×*]$/i);
+                        if(!qm) continue;
+                        const qtd = parseInt(qm[1],10);
+                        let antes=[];
+                        for(let j=Math.max(0,i-4);j<i;j++){
+                            const t=tokens[j].replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ0-9]+$/g,'');
+                            if(/[A-Za-zÀ-ÿ]/.test(t)) antes.push(t);
                         }
-                    });
+                        if(antes.length) tentar('',antes.join(' '),qtd);
+                        let depois=[];
+                        for(let j=i+1;j<=Math.min(tokens.length-1,i+4);j++){
+                            const t=tokens[j].replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ0-9]+$/g,'');
+                            if(/[A-Za-zÀ-ÿ]/.test(t)) depois.push(t);
+                            else break;
+                        }
+                        if(depois.length) tentar('',depois.join(' '),qtd);
+                    }
 
                     // Junta nomes repetidos no mesmo print.
                     const agrupado = {};
@@ -1820,26 +1854,26 @@
 
                 async function executarOCRRobusto(file){
                     const textos = [];
-                    // Primeira passada: imagem original, útil quando há cores/contraste importantes.
-                    try {
-                        const r = await Tesseract.recognize(file, 'por+eng', {config: '--psm 11'});
-                        if(r?.data?.text) textos.push(r.data.text);
-                    } catch(e) { console.warn('[BPE OCR] passada original falhou', e); }
+                    const imagens = [];
+                    imagens.push({img:file, psm:11});
+                    try { imagens.push({img:await prepararImagemOCR(file), psm:6}); } catch(e) { console.warn('[BPE OCR] preparo 1 falhou',e); }
+                    try { imagens.push({img:await prepararImagemOCR(file), psm:11}); } catch(e) { console.warn('[BPE OCR] preparo 2 falhou',e); }
 
-                    // Segunda passada: imagem ampliada e em escala de cinza, melhora inventários escuros.
-                    try {
-                        const preparada = await prepararImagemOCR(file);
-                        const r = await Tesseract.recognize(preparada, 'por+eng', {config: '--psm 6'});
-                        if(r?.data?.text) textos.push(r.data.text);
-                    } catch(e) { console.warn('[BPE OCR] passada tratada falhou', e); }
-
-                    // Terceira passada esparsa para caixas de inventário com muitos blocos separados.
-                    try {
-                        const preparada = await prepararImagemOCR(file);
-                        const r = await Tesseract.recognize(preparada, 'por+eng', {config: '--psm 11'});
-                        if(r?.data?.text) textos.push(r.data.text);
-                    } catch(e) { console.warn('[BPE OCR] passada esparsa falhou', e); }
-
+                    for(const entrada of imagens){
+                        for(const lang of ['por+eng','eng']){
+                            try{
+                                const r=await Tesseract.recognize(entrada.img,lang,{
+                                    config:{
+                                        tessedit_pageseg_mode:String(entrada.psm),
+                                        preserve_interword_spaces:'1'
+                                    }
+                                });
+                                if(r?.data?.text) textos.push(r.data.text);
+                            }catch(e){
+                                console.warn(`[BPE OCR] ${lang}/psm${entrada.psm} falhou`,e);
+                            }
+                        }
+                    }
                     return textos.join('\n');
                 }
 
