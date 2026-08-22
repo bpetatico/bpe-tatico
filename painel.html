@@ -1822,29 +1822,43 @@
                     return Object.values(agrupado);
                 }
 
-                async function prepararImagemOCR(file){
+                async function prepararImagemOCR(file, modo='contraste'){
                     return new Promise((resolve, reject) => {
                         const img = new Image();
                         const url = URL.createObjectURL(file);
                         img.onload = () => {
                             try {
-                                const escala = Math.min(3, Math.max(2, 1800 / Math.max(img.width, img.height)));
+                                // Aumenta bastante a imagem para ajudar o OCR em inventários pequenos.
+                                const maior = Math.max(img.width, img.height);
+                                const escala = Math.min(4, Math.max(2.5, 2400 / maior));
                                 const w = Math.max(1, Math.round(img.width * escala));
                                 const h = Math.max(1, Math.round(img.height * escala));
                                 const canvas = document.createElement('canvas');
                                 canvas.width = w; canvas.height = h;
                                 const ctx = canvas.getContext('2d', {willReadFrequently:true});
+                                ctx.imageSmoothingEnabled = true;
+                                ctx.imageSmoothingQuality = 'high';
                                 ctx.drawImage(img, 0, 0, w, h);
-                                const dados = ctx.getImageData(0,0,w,h);
-                                for(let i=0;i<dados.data.length;i+=4){
-                                    const r=dados.data[i], g=dados.data[i+1], b=dados.data[i+2];
-                                    let v = 0.299*r + 0.587*g + 0.114*b;
-                                    // Contraste leve + preservação de texto claro em fundo escuro.
-                                    v = Math.max(0, Math.min(255, (v-128)*1.45+128));
-                                    dados.data[i]=dados.data[i+1]=dados.data[i+2]=v;
+
+                                if(modo !== 'original'){
+                                    const dados = ctx.getImageData(0,0,w,h);
+                                    for(let i=0;i<dados.data.length;i+=4){
+                                        const r=dados.data[i], g=dados.data[i+1], b=dados.data[i+2];
+                                        let v = 0.299*r + 0.587*g + 0.114*b;
+                                        if(modo === 'binario'){
+                                            // Binarização simples para letras claras/escuras.
+                                            v = v > 150 ? 255 : 0;
+                                        } else {
+                                            v = Math.max(0, Math.min(255, (v-128)*1.8+128));
+                                        }
+                                        dados.data[i]=dados.data[i+1]=dados.data[i+2]=v;
+                                    }
+                                    ctx.putImageData(dados,0,0);
                                 }
-                                ctx.putImageData(dados,0,0);
-                                canvas.toBlob(blob => { URL.revokeObjectURL(url); blob ? resolve(blob) : reject(new Error('Falha ao preparar imagem')); }, 'image/png');
+                                canvas.toBlob(blob => {
+                                    URL.revokeObjectURL(url);
+                                    blob ? resolve(blob) : reject(new Error('Falha ao preparar imagem'));
+                                }, 'image/png');
                             } catch(e){ URL.revokeObjectURL(url); reject(e); }
                         };
                         img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
@@ -1853,28 +1867,158 @@
                 }
 
                 async function executarOCRRobusto(file){
-                    const textos = [];
-                    const imagens = [];
-                    imagens.push({img:file, psm:11});
-                    try { imagens.push({img:await prepararImagemOCR(file), psm:6}); } catch(e) { console.warn('[BPE OCR] preparo 1 falhou',e); }
-                    try { imagens.push({img:await prepararImagemOCR(file), psm:11}); } catch(e) { console.warn('[BPE OCR] preparo 2 falhou',e); }
+                    const leituras = [];
+                    const entradas = [
+                        {img:file, psm:11, modo:'original'},
+                        {img:await prepararImagemOCR(file,'contraste'), psm:11, modo:'contraste'},
+                        {img:await prepararImagemOCR(file,'contraste'), psm:6, modo:'contraste'},
+                        {img:await prepararImagemOCR(file,'binario'), psm:11, modo:'binario'},
+                        {img:await prepararImagemOCR(file,'binario'), psm:6, modo:'binario'}
+                    ];
 
-                    for(const entrada of imagens){
+                    for(const entrada of entradas){
                         for(const lang of ['por+eng','eng']){
                             try{
-                                const r=await Tesseract.recognize(entrada.img,lang,{
-                                    config:{
-                                        tessedit_pageseg_mode:String(entrada.psm),
-                                        preserve_interword_spaces:'1'
-                                    }
+                                const r = await Tesseract.recognize(entrada.img, lang, {
+                                    tessedit_pageseg_mode: String(entrada.psm),
+                                    preserve_interword_spaces: '1'
                                 });
-                                if(r?.data?.text) textos.push(r.data.text);
+                                if(r?.data?.text){
+                                    leituras.push({
+                                        text:r.data.text,
+                                        words:Array.isArray(r.data.words) ? r.data.words : [],
+                                        confidence:Number(r.data.confidence)||0,
+                                        modo:entrada.modo,
+                                        psm:entrada.psm,
+                                        lang
+                                    });
+                                }
                             }catch(e){
-                                console.warn(`[BPE OCR] ${lang}/psm${entrada.psm} falhou`,e);
+                                console.warn(`[BPE OCR] ${lang}/psm${entrada.psm}/${entrada.modo} falhou`,e);
                             }
                         }
                     }
-                    return textos.join('\n');
+
+                    if(!leituras.length) return {text:'',words:[],confidence:0};
+                    // Escolhe a leitura que realmente encontrou mais estrutura numérica,
+                    // em vez de juntar todas as leituras e duplicar itens.
+                    const pontuar = l => {
+                        const numeros = (l.words||[]).filter(w=>/^(?:x|×|\*)?\d{1,6}[.,]?$/.test(String(w.text||'').trim())).length;
+                        const linhas = String(l.text||'').split('\n').filter(x=>x.trim()).length;
+                        return numeros*100 + Math.min(linhas,80) + (l.confidence/100);
+                    };
+                    leituras.sort((a,b)=>pontuar(b)-pontuar(a));
+                    return leituras[0];
+                }
+
+                function palavrasOCRComPosicao(leitura){
+                    const words=(leitura?.words||[]).map(w=>({
+                        text:String(w.text||'').trim(),
+                        conf:Number(w.confidence)||0,
+                        x:Number(w.bbox?.x0)||0,
+                        y:Number(w.bbox?.y0)||0,
+                        x1:Number(w.bbox?.x1)||0,
+                        y1:Number(w.bbox?.y1)||0
+                    })).filter(w=>w.text && w.conf>=15);
+                    // Agrupa por linha visual. Isso é muito mais confiável para inventários
+                    // do que tentar adivinhar pela ordem do texto puro do OCR.
+                    const linhas=[];
+                    for(const w of words.sort((a,b)=>a.y-b.y||a.x-b.x)){
+                        let linha=linhas.find(l=>Math.abs(l.y-w.y)<=Math.max(12,(w.y1-w.y)*0.65));
+                        if(!linha){linha={y:w.y,words:[]};linhas.push(linha);}
+                        linha.words.push(w);
+                    }
+                    linhas.forEach(l=>l.words.sort((a,b)=>a.x-b.x));
+                    return linhas;
+                }
+
+                function extrairMateriaisDaLeituraOCR(leitura){
+                    const encontrados=[];
+                    const linhas=palavrasOCRComPosicao(leitura);
+                    const lixo=/^(x|×|id|total|qtd|quantidade|peso|valor|preço|dinheiro|saldo|capacidade|slot|espaço|unidades?|und|inventário|inventario|menu|usar|equipar|descartar|fechar|abrir|sair|voltar|confirmar|cancelar)$/i;
+                    const limpar=t=>String(t||'').replace(/^[^A-Za-zÀ-ÿ0-9]+|[^A-Za-zÀ-ÿ0-9]+$/g,'').replace(/\s+/g,' ').trim();
+                    const adicionar=(nome,qtd)=>{
+                        nome=limpar(nome); qtd=parseInt(qtd,10);
+                        if(!nome || nome.length<2 || !/[A-Za-zÀ-ÿ]/.test(nome) || lixo.test(nome)) return;
+                        if(!Number.isFinite(qtd)||qtd<=0||qtd>100000) return;
+                        // Não aceita nomes formados apenas por UI comum do inventário.
+                        if(/^(x|qtd|item|total|slot|peso|valor|invent[aá]rio)$/i.test(nome)) return;
+                        encontrados.push({item:nome,qtd});
+                    };
+
+                    for(const linha of linhas){
+                        const ws=linha.words;
+                        for(let i=0;i<ws.length;i++){
+                            const t=ws[i].text.replace(/[.,]$/,'');
+                            let m=t.match(/^[x×*](\d{1,6})$/i);
+                            let numero=m?parseInt(m[1],10):null;
+                            let indiceNum=i;
+                            let formatoX=!!m;
+                            if(numero===null){
+                                m=t.match(/^(\d{1,6})[x×*]$/i);
+                                if(m){numero=parseInt(m[1],10);indiceNum=i;formatoX=true;}
+                            }
+                            if(numero===null){
+                                m=t.match(/^(\d{1,6})$/);
+                                if(m){numero=parseInt(m[1],10);indiceNum=i;}
+                            }
+                            if(numero===null) continue;
+
+                            // Ignora números muito prováveis de serem IDs/menus/valores.
+                            if(!formatoX && numero>9999) continue;
+
+                            const antes=[];
+                            for(let j=indiceNum-1;j>=0 && antes.length<6;j--){
+                                const z=limpar(ws[j].text);
+                                if(!z || lixo.test(z)) break;
+                                if(/^\d+$/.test(z)) break;
+                                antes.unshift(z);
+                            }
+                            const depois=[];
+                            for(let j=indiceNum+1;j<ws.length && depois.length<6;j++){
+                                const z=limpar(ws[j].text);
+                                if(!z || lixo.test(z)) break;
+                                if(/^\d+$/.test(z)) break;
+                                depois.push(z);
+                            }
+
+                            // Primeiro tenta o nome imediatamente próximo ao número.
+                            if(antes.length) adicionar(antes.join(' '),numero);
+                            else if(depois.length) adicionar(depois.join(' '),numero);
+                        }
+                    }
+
+                    // Segunda tentativa: texto puro, útil quando o Tesseract não entrega bbox.
+                    if(!encontrados.length){
+                        const texto=String(leitura?.text||'').replace(/\r/g,'');
+                        for(const linha0 of texto.split('\n')){
+                            const linha=linha0.replace(/\s+/g,' ').trim();
+                            if(!linha) continue;
+                            let m=linha.match(/^(.{2,80}?)\s*[x×*]\s*(\d{1,6})\b/i);
+                            if(m) adicionar(m[1],m[2]);
+                            m=linha.match(/^(\d{1,6})\s*[x×*]\s*(.{2,80})$/i);
+                            if(m) adicionar(m[2],m[1]);
+                            m=linha.match(/^(.{2,80}?)\s+(\d{1,6})\s*(?:un(?:idade)?s?|und|qtd)?$/i);
+                            if(m) adicionar(m[1],m[2]);
+                        }
+                    }
+
+                    const agrupado={};
+                    encontrados.forEach(r=>{
+                        const chave=normalizarTexto(r.item);
+                        if(!agrupado[chave]) agrupado[chave]={item:r.item,qtd:0};
+                        agrupado[chave].qtd+=r.qtd;
+                    });
+                    return Object.values(agrupado);
+                }
+
+                function extrairMateriaisDoOCR(leitura){
+                    // Mantém a função antiga como ponto de compatibilidade, mas agora usa
+                    // leitura por posição das palavras do Tesseract.
+                    if(leitura && typeof leitura === 'object' && (leitura.words || leitura.text)){
+                        return extrairMateriaisDaLeituraOCR(leitura);
+                    }
+                    return [];
                 }
 
                 function atualizarFilaApreensoes(){
@@ -1908,9 +2052,9 @@
                     const numero = printsApreensaoPendentes.length + 1;
                     alert(`🤖 Lendo todos os itens do print ${numero} do inventário...`);
                     try {
-                        const text = await executarOCRRobusto(file);
-                        const resultados = extrairMateriaisDoOCR(text);
-                        printsApreensaoPendentes.push({file, resultados, textoOCR:text});
+                        const leitura = await executarOCRRobusto(file);
+                        const resultados = extrairMateriaisDoOCR(leitura);
+                        printsApreensaoPendentes.push({file, resultados, textoOCR:leitura?.text||'', confiancaOCR:leitura?.confidence||0});
                         atualizarFilaApreensoes();
                         if(resultados.length){
                             alert(`✅ Print ${numero} lido. Foram identificados ${resultados.length} tipo(s) de material:\n\n${resultados.map(r=>`${r.item}: ${r.qtd}`).join('\n')}\n\nO print ficou aguardando envio.`);
