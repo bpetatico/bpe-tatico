@@ -126,7 +126,7 @@
                         <path d="M50 19v8 M46 23h8" stroke="#111" stroke-width="1.5"/>
                     </svg>
                 </div>
-                <h2>BPE OPERACIONAL</h2>
+                <h2>BPE TÁTICO</h2>
                 <div style="font-size:10px;color:#d6ad00;font-weight:800;letter-spacing:1.2px;margin-top:-2px;">CAVEIRA</div>
                 <div class="user-badge">
                     <p id="user-display">Carregando...</p>
@@ -846,6 +846,7 @@
                         if (typeof renderizarMuralAusencias === 'function') renderizarMuralAusencias();
                         if (typeof renderizarNecroteca === 'function') renderizarNecroteca();
                         if (typeof renderizarHistoriaBPE === 'function') renderizarHistoriaBPE();
+                        if (typeof renderizarHistoricoApreensoes === 'function') renderizarHistoricoApreensoes();
                         sincronizarUsuarioAtualNaTela();
                         atualizarTagEstagioUsuario();
                         atualizarTabelasGerais();
@@ -1866,7 +1867,7 @@
                             const imagem = p.previewDataUrl
                                 ? `<div style="margin-top:12px;background:#101010;border:1px solid #3a3a3a;border-radius:10px;padding:8px;text-align:center;"><div style="color:#aaa;font-size:11px;font-weight:bold;text-align:left;margin:0 0 6px;">👁️ VISUALIZAÇÃO DO PRINT — será arquivado para fiscalização</div><img src="${p.previewDataUrl}" alt="Print da apreensão ${i+1}" style="display:block;max-width:100%;max-height:520px;margin:0 auto;border-radius:7px;object-fit:contain;"></div>`
                                 : '<div style="margin-top:12px;color:#aaa;font-size:12px;">⏳ Preparando visualização do print...</div>';
-                            return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;"><strong>📸 Print ${i+1}</strong><button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button></div>${imagem}<label style="display:block;margin-top:14px;color:#ffcc00;font-weight:bold;">📦 MATERIAIS APREENDIDOS NESTE PRINT:</label><textarea id="materiais-print-${i}" rows="2" style="width:100%;box-sizing:border-box;margin-top:6px;padding:11px;background:#111;color:#fff;border:1px solid #555;border-radius:8px;resize:vertical;" placeholder="Ex.: 20 maconha, 10 maconhas, 1 pistola" >${escaparHTMLApreensao(p.textoMateriais || '')}</textarea><div style="margin-top:6px;color:#aaa;font-size:12px;">Digite quantidade + material. Singular/plural e pequenas variações são agrupados automaticamente.</div><div id="resumo-print-${i}" style="margin-top:8px;color:#ddd;font-size:13px;">Resumo deste print: ${resumo}</div></div>`;
+                            return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;"><strong>📸 Print ${i+1}</strong><button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button></div>${imagem}<label style="display:block;margin-top:14px;color:#ffcc00;font-weight:bold;">📦 MATERIAIS APREENDIDOS NESTE PRINT:</label><textarea id="materiais-print-${i}" rows="2" style="width:100%;box-sizing:border-box;margin-top:6px;padding:11px;background:#111;color:#fff;border:1px solid #555;border-radius:8px;resize:vertical;" placeholder="Ex.: 20 maconha, 10 maconhas, 1 pistola" oninput="registrarTextoMaterialApreensao(this)" onblur="finalizarTextoMaterialApreensao(this)">${escaparHTMLApreensao(p.textoMateriais || '')}</textarea><div style="margin-top:6px;color:#aaa;font-size:12px;">Digite quantidade + material. Singular/plural e pequenas variações são agrupados automaticamente.</div><div id="resumo-print-${i}" style="margin-top:8px;color:#ddd;font-size:13px;">Resumo deste print: ${resumo}</div></div>`;
                         }).join('');
                         let preview = document.getElementById('preview-materiais-apreensao');
                         if(!preview){
@@ -1883,33 +1884,41 @@
                 function atualizarMateriaisDoPrint(indice, texto){
                     const p = printsApreensaoPendentes[indice];
                     if(!p) return;
-
-                    // Atualiza somente os dados e os pequenos resumos.
-                    // Não recria a fila/textarea durante a digitação, evitando
-                    // perda de foco, cursor pulando e necessidade de clicar
-                    // novamente a cada caractere.
                     p.textoMateriais = String(texto ?? '');
                     p.materiais = interpretarMateriaisDigitados(p.textoMateriais);
-
                     const resumo = document.getElementById(`resumo-print-${indice}`);
                     if(resumo){
-                        resumo.innerHTML = p.materiais.length
-                            ? 'Resumo deste print: ' + p.materiais.map(m => `${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ')
-                            : 'Resumo deste print: <span style="color:#aaa;">Nenhum material informado ainda.</span>';
+                        resumo.textContent = p.materiais.length
+                            ? 'Resumo deste print: ' + p.materiais.map(m => `${m.item}: ${m.qtd}`).join(' • ')
+                            : 'Resumo deste print: Nenhum material informado ainda.';
                     }
                     atualizarPreviewMateriaisApreensao();
                 }
 
-                // Usa delegação para que a caixa continue estável mesmo quando
-                // outros componentes do painel forem atualizados.
-                document.addEventListener('input', function(event){
-                    const alvo = event.target;
-                    if(!alvo || !alvo.id || !alvo.id.startsWith('materiais-print-')) return;
-                    const indice = Number(alvo.id.replace('materiais-print-',''));
-                    if(Number.isInteger(indice)) atualizarMateriaisDoPrint(indice, alvo.value);
-                });
+                // Atualiza somente o objeto em memória enquanto o policial digita.
+                // Não recria a textarea, não substitui seu conteúdo e não chama
+                // atualizarFilaApreensoes(), evitando perda de foco/cursor.
+                function registrarTextoMaterialApreensao(campo){
+                    if(!campo || !campo.id) return;
+                    const indice = Number(campo.id.replace('materiais-print-',''));
+                    if(!Number.isInteger(indice)) return;
+                    const p = printsApreensaoPendentes[indice];
+                    if(!p) return;
+                    p.textoMateriais = campo.value;
+                    clearTimeout(campo._bpeMaterialTimer);
+                    campo._bpeMaterialTimer = setTimeout(() => {
+                        if(document.activeElement !== campo) return;
+                        atualizarMateriaisDoPrint(indice, campo.value);
+                    }, 120);
+                }
 
-                function removerPrintApreensao(indice){
+                function finalizarTextoMaterialApreensao(campo){
+                    if(!campo || !campo.id) return;
+                    const indice = Number(campo.id.replace('materiais-print-',''));
+                    if(Number.isInteger(indice)) atualizarMateriaisDoPrint(indice, campo.value);
+                }
+
+function removerPrintApreensao(indice){
                     printsApreensaoPendentes.splice(indice,1);
                     atualizarFilaApreensoes();
                 }
@@ -2426,11 +2435,15 @@
                 }
 
                 function fazerLogout(){
-                    localStorage.removeItem('acessoSupremo');
-                    localStorage.removeItem('usuarioLogado');
-                    localStorage.removeItem('idLogado');
-                    localStorage.removeItem('cargoUsuario');
-                    irParaCadastro();
+                    try {
+                        localStorage.removeItem('acessoSupremo');
+                        localStorage.removeItem('usuarioLogado');
+                        localStorage.removeItem('idLogado');
+                        localStorage.removeItem('cargoUsuario');
+                        sessionStorage.clear();
+                    } catch(e) {}
+                    // O logout nunca apaga dados do Supabase. Apenas encerra a sessão local.
+                    window.location.replace('./index.html');
                 }
             </script>
             <div class="site-credit">Site criado por Palmeira • 20/08/2026</div>
