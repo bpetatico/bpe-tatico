@@ -25,6 +25,9 @@
             overflow-y: auto;
         }
         .full-width-textarea:focus { border-color: #0052cc; }
+        /* Campo de materiais: mantém foco/cursor estáveis durante a digitação. */
+        textarea[id^="materiais-print-"] { min-height:78px; line-height:1.45; font-size:14px; font-family:inherit; }
+        textarea[id^="materiais-print-"]:focus { outline:2px solid rgba(0,82,204,.35); outline-offset:1px; }
         .input-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%; }
         .input-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; }
         .form-section-title { font-size: 13px; color: #ffcc00; margin: 25px 0 15px 0; border-bottom: 1px solid #2c2c2e; padding-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -1863,7 +1866,7 @@
                             const imagem = p.previewDataUrl
                                 ? `<div style="margin-top:12px;background:#101010;border:1px solid #3a3a3a;border-radius:10px;padding:8px;text-align:center;"><div style="color:#aaa;font-size:11px;font-weight:bold;text-align:left;margin:0 0 6px;">👁️ VISUALIZAÇÃO DO PRINT — será arquivado para fiscalização</div><img src="${p.previewDataUrl}" alt="Print da apreensão ${i+1}" style="display:block;max-width:100%;max-height:520px;margin:0 auto;border-radius:7px;object-fit:contain;"></div>`
                                 : '<div style="margin-top:12px;color:#aaa;font-size:12px;">⏳ Preparando visualização do print...</div>';
-                            return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;"><strong>📸 Print ${i+1}</strong><button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button></div>${imagem}<label style="display:block;margin-top:14px;color:#ffcc00;font-weight:bold;">📦 MATERIAIS APREENDIDOS NESTE PRINT:</label><textarea id="materiais-print-${i}" rows="2" style="width:100%;box-sizing:border-box;margin-top:6px;padding:11px;background:#111;color:#fff;border:1px solid #555;border-radius:8px;resize:vertical;" placeholder="Ex.: 20 maconha, 10 maconhas, 1 pistola" oninput="atualizarMateriaisDoPrint(${i}, this.value)">${escaparHTMLApreensao(p.textoMateriais || '')}</textarea><div style="margin-top:6px;color:#aaa;font-size:12px;">Digite quantidade + material. Singular/plural e pequenas variações são agrupados automaticamente.</div><div id="resumo-print-${i}" style="margin-top:8px;color:#ddd;font-size:13px;">Resumo deste print: ${resumo}</div></div>`;
+                            return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;"><strong>📸 Print ${i+1}</strong><button type="button" class="admin-delete" onclick="removerPrintApreensao(${i})">REMOVER</button></div>${imagem}<label style="display:block;margin-top:14px;color:#ffcc00;font-weight:bold;">📦 MATERIAIS APREENDIDOS NESTE PRINT:</label><textarea id="materiais-print-${i}" rows="2" style="width:100%;box-sizing:border-box;margin-top:6px;padding:11px;background:#111;color:#fff;border:1px solid #555;border-radius:8px;resize:vertical;" placeholder="Ex.: 20 maconha, 10 maconhas, 1 pistola" >${escaparHTMLApreensao(p.textoMateriais || '')}</textarea><div style="margin-top:6px;color:#aaa;font-size:12px;">Digite quantidade + material. Singular/plural e pequenas variações são agrupados automaticamente.</div><div id="resumo-print-${i}" style="margin-top:8px;color:#ddd;font-size:13px;">Resumo deste print: ${resumo}</div></div>`;
                         }).join('');
                         let preview = document.getElementById('preview-materiais-apreensao');
                         if(!preview){
@@ -1880,14 +1883,31 @@
                 function atualizarMateriaisDoPrint(indice, texto){
                     const p = printsApreensaoPendentes[indice];
                     if(!p) return;
-                    p.textoMateriais = texto;
-                    p.materiais = interpretarMateriaisDigitados(texto);
+
+                    // Atualiza somente os dados e os pequenos resumos.
+                    // Não recria a fila/textarea durante a digitação, evitando
+                    // perda de foco, cursor pulando e necessidade de clicar
+                    // novamente a cada caractere.
+                    p.textoMateriais = String(texto ?? '');
+                    p.materiais = interpretarMateriaisDigitados(p.textoMateriais);
+
                     const resumo = document.getElementById(`resumo-print-${indice}`);
                     if(resumo){
-                        resumo.innerHTML = p.materiais.length ? 'Resumo deste print: ' + p.materiais.map(m => `${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ') : 'Resumo deste print: <span style="color:#aaa;">Nenhum material informado ainda.</span>';
+                        resumo.innerHTML = p.materiais.length
+                            ? 'Resumo deste print: ' + p.materiais.map(m => `${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ')
+                            : 'Resumo deste print: <span style="color:#aaa;">Nenhum material informado ainda.</span>';
                     }
                     atualizarPreviewMateriaisApreensao();
                 }
+
+                // Usa delegação para que a caixa continue estável mesmo quando
+                // outros componentes do painel forem atualizados.
+                document.addEventListener('input', function(event){
+                    const alvo = event.target;
+                    if(!alvo || !alvo.id || !alvo.id.startsWith('materiais-print-')) return;
+                    const indice = Number(alvo.id.replace('materiais-print-',''));
+                    if(Number.isInteger(indice)) atualizarMateriaisDoPrint(indice, alvo.value);
+                });
 
                 function removerPrintApreensao(indice){
                     printsApreensaoPendentes.splice(indice,1);
@@ -2401,7 +2421,7 @@
 
                 function irParaCadastro(){
                     // Usa o endereço relativo ao próprio painel para funcionar no GitHub Pages.
-                    const destino = new URL('./cadastro.html', window.location.href).href;
+                    const destino = new URL('./index.html', window.location.href).href;
                     window.location.assign(destino);
                 }
 
