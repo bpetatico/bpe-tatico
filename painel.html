@@ -39,20 +39,13 @@
         .access-lock { max-width:760px;margin:60px auto; text-align:center; }
         .access-lock .lock-icon { font-size:58px;margin-bottom:10px; }
         .site-credit { position:fixed; right:12px; bottom:8px; color:#666;font-size:10px;z-index:10;pointer-events:none; }
-        .btn-retornar-cadastro {
-            position:fixed; top:12px; right:16px; z-index:10000;
-            background:#2c2c2e; color:#fff; border:1px solid #555;
-            padding:9px 14px; border-radius:7px; font-weight:800;
-            cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.35);
-        }
-        .btn-retornar-cadastro:hover { border-color:#ffcc00; color:#ffcc00; }
         .dados-pessoais-card { max-width:760px; margin:25px auto; }
         .dados-pessoais-aviso { background:rgba(255,204,0,.08); border:1px solid rgba(255,204,0,.3); color:#d7d7d7; padding:14px; border-radius:8px; line-height:1.6; margin-bottom:20px; }
         .dados-pessoais-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
         .dados-pessoais-grid label { display:block; color:#aeaea3; font-size:13px; margin-bottom:6px; }
         .dados-pessoais-grid input { width:100%; box-sizing:border-box; padding:12px; background:#2c2c2e; border:1px solid #3a3a3c; color:#fff; border-radius:6px; outline:none; }
         .dados-pessoais-grid input:focus { border-color:#ffcc00; }
-        @media (max-width:700px) { .dados-pessoais-grid { grid-template-columns:1fr; } .btn-retornar-cadastro { top:8px; right:8px; padding:8px 10px; font-size:11px; } }
+        @media (max-width:700px) { .dados-pessoais-grid { grid-template-columns:1fr; } }
 
         /* ===== BPE TÁTICO — ROLAGEM CORRIGIDA ===== */
         html, body { height:100%; min-height:100%; }
@@ -161,7 +154,6 @@
 
         <!-- CONTEÚDO PRINCIPAL (MURAL CENTRAL DINÂMICO E ISOLADO) -->
         <main class="main-content">
-            <button class="btn-retornar-cadastro" type="button" onclick="irParaCadastro()">↩️ Retornar</button>
             <!-- ====== PORTA DE ACESSO ====== -->
             <div id="content-acesso" class="aba-conteudo hidden">
                 <div class="card access-lock">
@@ -1315,11 +1307,36 @@
                     }
 
                     if (acao === 'exonerar') {
-                        if (!confirm(`🚨 EXONERAÇÃO\n\nTem certeza que deseja exonerar ${pm.usuario || pm.nome} (ID ${pm.id})?\\n\\nO policial será removido do banco de efetivo deste navegador.`)) return;
+                        if (!confirm(`🚨 EXONERAÇÃO\n\nTem certeza que deseja exonerar ${pm.usuario || pm.nome} (ID ${pm.id})?\n\nO policial será removido do efetivo e não poderá entrar novamente sem autorização do Alto Comando.`)) return;
+
                         const exonerados = lerJSON('bancoExoneradosBPE', []);
-                        if (!exonerados.some(x => String(x.id) === String(pm.id))) exonerados.push({ id:String(pm.id), usuario:pm.usuario, data:new Date().toLocaleString('pt-BR'), exoneradoPor:localStorage.getItem('usuarioLogado')||'Alto Comando' });
+                        const registro = {
+                            id: String(pm.id),
+                            usuario: pm.usuario || pm.nome,
+                            data: new Date().toLocaleString('pt-BR'),
+                            exoneradoPor: localStorage.getItem('usuarioLogado') || 'Alto Comando',
+                            retornouAoBatalhao: false,
+                            retornoAprovadoPor: null,
+                            retornoEm: null,
+                            observacaoRetorno: null
+                        };
+                        const idxEx = exonerados.findIndex(x => String(x.id) === String(pm.id));
+                        if (idxEx >= 0) exonerados[idxEx] = registro;
+                        else exonerados.push(registro);
                         salvarJSON('bancoExoneradosBPE', exonerados);
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} EXONEROU ${pm.usuario} (ID ${pm.id}).`);
+
+                        // Mantém o cadastro de autenticação para preservar a senha pessoal,
+                        // mas marca o policial como exonerado e bloqueia o login.
+                        const usuariosLogin = lerJSON('usuariosBPE', []);
+                        const uidx = usuariosLogin.findIndex(u => String(u.id) === String(pm.id));
+                        if (uidx >= 0) {
+                            usuariosLogin[uidx].status = 'exonerado';
+                            usuariosLogin[uidx].acessoLiberado = 'nao';
+                            usuariosLogin[uidx].aprovadoAcesso = false;
+                            salvarJSON('usuariosBPE', usuariosLogin);
+                        }
+
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} EXONEROU ${pm.usuario} (ID ${pm.id}). Login bloqueado até nova autorização.`);
                         lista.splice(indice, 1);
                     }
 
@@ -1763,6 +1780,16 @@
                     const usuarios = lerJSON('bancoUsuariosBPE', []);
                     let pm = usuarios.find(u => String(u.id) === String(req.id));
                     if (aprovar) {
+                        // Reativa o cadastro de autenticação e preserva a senha pessoal.
+                        const usuariosLogin = lerJSON('usuariosBPE', []);
+                        const uidx = usuariosLogin.findIndex(u => String(u.id) === String(req.id));
+                        if (uidx >= 0) {
+                            usuariosLogin[uidx].status = 'ativo';
+                            usuariosLogin[uidx].acessoLiberado = 'sim';
+                            usuariosLogin[uidx].aprovadoAcesso = true;
+                            salvarJSON('usuariosBPE', usuariosLogin);
+                        }
+
                         if (!pm) {
                             pm = { id:req.id, usuario:req.usuario, nome:req.usuario, patente:extrairPatenteDoNome(req.usuario) || 'SOLDADO 2ª CLASSE', cargo:req.cargo || '', aprovadoAcesso:true, acessoLiberado:'sim', situacaoEstagio:'nao' };
                             usuarios.push(pm);
@@ -2071,9 +2098,11 @@
                 }
 
                 function irParaCadastro(){
-                    // Usa o endereço relativo ao próprio painel para funcionar no GitHub Pages.
-                    const destino = new URL('./cadastro.html', window.location.href).href;
-                    window.location.assign(destino);
+                    // Volta para o cadastro/login no mesmo diretório do GitHub Pages.
+                    const caminhoAtual = window.location.pathname;
+                    const diretorio = caminhoAtual.substring(0, caminhoAtual.lastIndexOf('/') + 1);
+                    const destino = window.location.origin + diretorio + 'cadastro.html';
+                    window.location.replace(destino);
                 }
 
                 function fazerLogout(){
