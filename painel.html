@@ -1189,8 +1189,6 @@
                     const id = pmAtual?.id || localStorage.getItem('idLogado') || '0000';
                     document.getElementById('user-display').textContent = usuario;
                     const patenteInicial = pmAtual ? obterPatenteDoPolicial(pmAtual) : (localStorage.getItem('cargoUsuario') || '--');
-                    const userPatenteInicial = document.getElementById('user-patente');
-                    if (userPatenteInicial) userPatenteInicial.textContent = `PATENTE: ${patenteInicial}`;
                     document.getElementById('ponto-nome').textContent = usuario;
                     document.getElementById('ponto-id').textContent = id;
                     carregarDadosPessoais();
