@@ -343,6 +343,7 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
             <!-- ====== ABA 6: CENTRAL DE RELATÓRIOS (RSO / GUINCHO) ====== -->
             <div id="content-relatorios" class="aba-conteudo hidden">
@@ -411,8 +412,6 @@
                         <div class="input-group" style="width: 100%;">
                             <label>Anexar Foto do Veículo</label>
                             <input type="file" id="gui-foto-arquivo" accept="image/*" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;" onchange="processarFotoVeiculo(this)">
-                            <div id="gui-paste-area" tabindex="0" style="margin-top:8px;padding:12px;border:1px dashed #ffcc00;border-radius:8px;background:#171717;color:#ccc;text-align:center;cursor:text;outline:none;">📋 <strong style="color:#ffcc00;">Cole o print aqui com CTRL + V</strong><br><small>Você também pode usar o botão acima para selecionar uma imagem.</small></div>
-                            <div id="gui-paste-status" style="margin-top:6px;color:#8f8f8f;font-size:12px;"></div>
                             <img id="gui-preview-img" src="" class="hidden" style="max-height: 150px; margin-top: 10px; border-radius: 6px; border: 1px solid #ffcc00; display: block;">
                             <input type="hidden" id="gui-foto-base64">
                         </div>
@@ -576,11 +575,6 @@
                     <h1 id="titulo-painel-coronel">PAINEL DE CONTROLE DO ALTO COMANDO</h1>
                     <div class="date-today" style="color:#ffcc00;">GESTÃO E AUDITORIA SUPREMA</div>
                 </header>
-
-                <section class="card" style="margin-top:20px;border:1px solid #ffcc00;">
-                    <div class="card-header-gold">🔎 FISCALIZAÇÃO DE APREENSÕES — PRINTS ENVIADOS PELOS POLICIAIS</div>
-                    <div id="historico-apreensoes-fiscalizacao-coronel" style="padding:14px;"></div>
-                </section>
 
                 <div class="mural-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:30px; margin-top:20px;">
                     <section class="card" style="border:1px solid #ffcc00;">
@@ -1239,7 +1233,6 @@
                         hierarquia: () => { renderizarHierarquiaGeral(); atualizarTagEstagioUsuario(); },
                         dados: carregarDadosPessoais,
                         coronel: () => {
-                            renderizarHistoricoApreensoes();
                             renderizarBoletinsECommunicados();
                             renderizarSolicitacoesAcesso();
                             renderizarPainelApagarTudo();
@@ -1977,26 +1970,19 @@ function removerPrintApreensao(indice){
                 }
 
                 function renderizarHistoricoApreensoes(){
-                    const ids=['historico-apreensoes-fiscalizacao','historico-apreensoes-fiscalizacao-coronel'];
-                    const areas=ids.map(id=>document.getElementById(id)).filter(Boolean);
-                    if(!areas.length) return;
-                    if(typeof usuarioEhAltoComando !== 'function' || !usuarioEhAltoComando()){ areas.forEach(area=>area.innerHTML=''); return; }
-                    const banco=lerJSON('bancoApreensoesBPE',[]);
-                    let html='';
+                    const area = document.getElementById('historico-apreensoes-fiscalizacao');
+                    if(!area) return;
+                    if(typeof usuarioEhAltoComando !== 'function' || !usuarioEhAltoComando()){ area.innerHTML=''; return; }
+                    const banco = lerJSON('bancoApreensoesBPE',[]);
                     if(!banco.length){
-                        html='<div class="card" style="padding:16px;"><strong>🔎 FISCALIZAÇÃO DE APREENSÕES</strong><p style="color:#aaa;margin-bottom:0;">Nenhuma apreensão enviada para conferência.</p></div>';
-                    } else {
-                        html=`<div class="card" style="padding:0;overflow:hidden;"><div class="card-header-gold">🔎 FISCALIZAÇÃO DE APREENSÕES — ALTO COMANDO</div><div style="padding:12px;">${banco.slice(0,20).map(reg=>{
-                            const mats=(reg.materiais||[]).map(m=>`${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ')||'Não informado';
-                            const prints=(reg.prints||[]).map((im,j)=>{
-                                const src=im.dataUrl||im.previewDataUrl||'';
-                                const detalhe=(im.materiais||[]).map(m=>`${m.item}: ${m.qtd}`).join(' • ');
-                                return `<details style="background:#111;border:1px solid #333;border-radius:8px;padding:7px;min-width:170px;"><summary style="cursor:pointer;font-weight:bold;">📸 Ver print ${j+1}</summary>${src?`<img src="${src}" alt="Print arquivado ${j+1}" style="display:block;max-width:100%;max-height:500px;margin-top:8px;border-radius:6px;">`:'<div style="color:#aaa;margin-top:8px;">Imagem não disponível neste registro.</div>'}<div style="color:#aaa;font-size:11px;margin-top:6px;">${escaparHTMLApreensao(detalhe)}</div></details>`;
-                            }).join('');
-                            return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="font-weight:bold;">${escaparHTMLApreensao(reg.policial||'Policial')}</div><div style="color:#999;font-size:12px;margin:3px 0 9px;">${escaparHTMLApreensao(reg.data||'')} — ${reg.prints?.length||0} print(s)</div><div style="color:#ffcc00;font-size:13px;margin-bottom:10px;">📦 ${mats}</div><div style="display:flex;gap:10px;flex-wrap:wrap;">${prints||'<span style="color:#aaa;">Nenhum print arquivado.</span>'}</div></div>`;
-                        }).join('')}</div></div>`;
+                        area.innerHTML='<div class="card" style="padding:16px;"><strong>🔎 FISCALIZAÇÃO DE APREENSÕES</strong><p style="color:#aaa;margin-bottom:0;">Nenhuma apreensão enviada para conferência.</p></div>';
+                        return;
                     }
-                    areas.forEach(area=>area.innerHTML=html);
+                    area.innerHTML=`<div class="card" style="padding:0;overflow:hidden;"><div class="card-header-gold">🔎 FISCALIZAÇÃO DE APREENSÕES — ALTO COMANDO</div><div style="padding:12px;">${banco.slice(0,20).map(reg=>{
+                        const mats=(reg.materiais||[]).map(m=>`${escaparHTMLApreensao(m.item)}: ${m.qtd}`).join(' • ')||'Não informado';
+                        const prints=(reg.prints||[]).map((im,j)=>`<details style="background:#111;border:1px solid #333;border-radius:8px;padding:7px;min-width:170px;"><summary style="cursor:pointer;font-weight:bold;">📸 Ver print ${j+1}</summary><img src="${im.dataUrl}" alt="Print arquivado ${j+1}" style="display:block;max-width:100%;max-height:500px;margin-top:8px;border-radius:6px;"><div style="color:#aaa;font-size:11px;margin-top:6px;">${escaparHTMLApreensao((im.materiais||[]).map(m=>`${m.item}: ${m.qtd}`).join(' • '))}</div></details>`).join('');
+                        return `<div style="padding:14px;border-bottom:1px solid #333;"><div style="font-weight:bold;">${escaparHTMLApreensao(reg.policial||'Policial')}</div><div style="color:#999;font-size:12px;margin:3px 0 9px;">${escaparHTMLApreensao(reg.data||'')} — ${reg.prints?.length||0} print(s)</div><div style="color:#ffcc00;font-size:13px;margin-bottom:10px;">📦 ${mats}</div><div style="display:flex;gap:10px;flex-wrap:wrap;">${prints}</div></div>`;
+                    }).join('')}</div></div>`;
                 }
 
                 function enviarApreensoesPendentes(){
@@ -2034,28 +2020,11 @@ function removerPrintApreensao(indice){
 
                 function simularLeituraOCR(input){ adicionarPrintsApreensao(input); }
 
-                // CTRL+V do print diretamente no Relatório de Guincho.
-                document.addEventListener('paste', function(event){
-                    const form=document.getElementById('form-registro-guincho');
-                    const caixa=document.getElementById('caixa-formulario-guincho');
-                    if(!form || !caixa || caixa.classList.contains('hidden')) return;
-                    const ativo=document.activeElement;
-                    if(ativo && (ativo.tagName==='INPUT' || ativo.tagName==='TEXTAREA') && ativo.id!=='gui-paste-area') return;
-                    const item=Array.from(event.clipboardData?.items||[]).find(i=>i.type&&i.type.startsWith('image/'));
-                    if(!item) return;
-                    const file=item.getAsFile();
-                    if(!file) return;
-                    event.preventDefault();
-                    processarFotoVeiculo({files:[file]});
-                    const status=document.getElementById('gui-paste-status');
-                    if(status) status.textContent='✅ Print colado com CTRL + V e anexado ao relatório.';
-                });
-
                 // RELATÓRIOS
                 function exibirFormularioRSO(){document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');document.getElementById('caixa-formulario-rso')?.classList.remove('hidden');}
                 function exibirFormularioGuincho(){document.getElementById('caixa-formulario-rso')?.classList.add('hidden');document.getElementById('caixa-formulario-guincho')?.classList.remove('hidden');}
                 function cancelarRSO(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-operacional')?.reset();document.getElementById('caixa-formulario-rso')?.classList.add('hidden');}}
-                function cancelarGuincho(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-guincho')?.reset();document.getElementById('gui-preview-img')?.classList.add('hidden');document.getElementById('gui-foto-base64').value="";if(document.getElementById('gui-paste-status')) document.getElementById('gui-paste-status').textContent="";document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');}}
+                function cancelarGuincho(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-guincho')?.reset();document.getElementById('gui-preview-img')?.classList.add('hidden');document.getElementById('gui-foto-base64').value="";document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');}}
                 function processarFotoVeiculo(input){if(input.files?.[0]){const leitor=new FileReader();leitor.onload=e=>{document.getElementById('gui-foto-base64').value=e.target.result;const p=document.getElementById('gui-preview-img');p.src=e.target.result;p.classList.remove('hidden');};leitor.readAsDataURL(input.files[0]);}}
                 function publicarRelatorioRSO(event){
                     event.preventDefault();
