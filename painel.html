@@ -1198,6 +1198,8 @@
                         return;
                     }
 
+                    // Navegação robusta: controla o display diretamente para impedir que
+                    // regras antigas de CSS/.hidden deixem a aba selecionada preta/vazia.
                     document.querySelectorAll('.aba-conteudo').forEach(a => {
                         a.classList.add('hidden');
                         a.style.setProperty('display', 'none', 'important');
@@ -1210,23 +1212,14 @@
                         console.error('[BPE] Aba não encontrada:', abaNome);
                         return;
                     }
-
-                    const exibirAlvo = () => {
-                        alvo.classList.remove('hidden');
-                        alvo.style.setProperty('display', 'block', 'important');
-                        alvo.style.setProperty('visibility', 'visible', 'important');
-                        alvo.style.setProperty('opacity', '1', 'important');
-                        alvo.setAttribute('aria-hidden', 'false');
-                    };
-
-                    exibirAlvo();
+                    alvo.classList.remove('hidden');
+                    alvo.style.setProperty('display', 'block', 'important');
+                    alvo.setAttribute('aria-hidden', 'false');
 
                     const btn = document.getElementById(`btn-menu-${abaNome}`);
                     if (btn) btn.classList.add('active');
 
-                    // Cada menu possui seu próprio renderizador. O painel do Alto Comando
-                    // usa exatamente as mesmas abas e dados do acesso dos membros; aqui
-                    // apenas garantimos que a renderização não deixe a aba invisível.
+                    // Renderiza também as áreas dinâmicas de cada menu.
                     const renderizadores = {
                         inicio: renderizarBoletinsECommunicados,
                         herois: renderizarMuralHerois,
@@ -1247,19 +1240,9 @@
                             renderizarAdminHerois();
                         }
                     };
-
-                    try {
-                        if (renderizadores[abaNome]) renderizadores[abaNome]();
-                    } catch (e) {
-                        console.error('[BPE] Erro ao renderizar aba', abaNome, e);
-                    } finally {
-                        // Reaplica depois do renderizador para impedir que qualquer rotina
-                        // antiga/legada de CSS deixe a tela preta ou a aba com display:none.
-                        exibirAlvo();
-                    }
+                    try { renderizadores[abaNome]?.(); } catch (e) { console.error('[BPE] Erro ao renderizar aba', abaNome, e); }
 
                     requestAnimationFrame(() => {
-                        exibirAlvo();
                         const principal = document.querySelector('.main-content');
                         if (principal) principal.scrollTop = 0;
                     });
@@ -1582,45 +1565,9 @@
                     alert('✅ Seus dados foram atualizados e enviados ao banco compartilhado.');
                 }
 
-                function obterAusenciaAtivaDoPolicial(pm, bancoAusencias = null) {
-                    const banco = Array.isArray(bancoAusencias) ? bancoAusencias : lerJSON('bancoAusenciasBPE', []);
-                    if (!pm) return null;
-
-                    const id = String(pm.id || '');
-                    const nomes = new Set([
-                        normalizarTexto(pm.usuario || ''),
-                        normalizarTexto(pm.nome || '')
-                    ].filter(Boolean));
-
-                    const hoje = new Date();
-                    hoje.setHours(0, 0, 0, 0);
-
-                    return banco.find(a => {
-                        const mesmoPolicial = String(a.policialId || '') === id || nomes.has(normalizarTexto(a.nome || ''));
-                        if (!mesmoPolicial || !a.inicio || !a.fim) return false;
-                        const inicio = new Date(String(a.inicio) + 'T00:00:00');
-                        const fim = new Date(String(a.fim) + 'T00:00:00');
-                        return !Number.isNaN(inicio.getTime()) && !Number.isNaN(fim.getTime()) && hoje >= inicio && hoje <= fim;
-                    }) || null;
-                }
-
-                function limparAusenciasExpiradas() {
-                    const banco = lerJSON('bancoAusenciasBPE', []);
-                    if (!Array.isArray(banco) || !banco.length) return banco;
-                    const hoje = new Date();
-                    hoje.setHours(0, 0, 0, 0);
-                    const ativos = banco.filter(a => {
-                        if (!a?.fim) return true;
-                        const fim = new Date(String(a.fim) + 'T00:00:00');
-                        return Number.isNaN(fim.getTime()) || fim >= hoje;
-                    });
-                    if (ativos.length !== banco.length) salvarJSON('bancoAusenciasBPE', ativos);
-                    return ativos;
-                }
-
                 function renderizarHierarquiaGeral() {
                     const listaPoliciais = lerJSON('bancoUsuariosBPE', []);
-                    const bancoAusencias = limparAusenciasExpiradas();
+                    const bancoAusencias = lerJSON('bancoAusenciasBPE', []);
 
                     const secoes = {
                         "alto-comando": document.getElementById('hierarquia-alto-comando'),
@@ -1645,7 +1592,12 @@
                         const idPolicial = String(pm.id || "0000");
                         const nomeCompleto = String(pm.usuario || pm.nome || "POLICIAL").trim();
 
-                        const aus = obterAusenciaAtivaDoPolicial(pm, bancoAusencias);
+                        const aus = bancoAusencias.find(a => {
+                            if (String(a.policialId) !== idPolicial) return false;
+                            const di = new Date(a.inicio + 'T00:00:00');
+                            const df = new Date(a.fim + 'T00:00:00');
+                            return hoje >= di && hoje <= df;
+                        });
 
                         const card = document.createElement('div');
                         card.style.cssText = "background:#1c1c1e;padding:15px;border-radius:6px;border:1px solid #2c2c2e;text-align:center;box-shadow:0 2px 4px rgba(0,0,0,.2);cursor:pointer;";
@@ -2120,7 +2072,7 @@ function removerPrintApreensao(indice){
                 }
                 function renderizarMuralAusencias(){
                     const feed=document.getElementById('feed-mural-ausencias');if(!feed)return;
-                    const banco=limparAusenciasExpiradas();
+                    const banco=lerJSON('bancoAusenciasBPE',[]);
                     if(!banco.length){feed.innerHTML='<p class="sem-registro">Nenhuma ausência registrada.</p>';return;}
                     feed.innerHTML="";
                     banco.forEach(aus=>{
@@ -2139,13 +2091,12 @@ function removerPrintApreensao(indice){
                     renderizarMuralAusencias();verificarStatusAusenciaUsuario();renderizarHierarquiaGeral();renderizarBoletinsECommunicados();alert("Licença anulada!");
                 }
                 function verificarStatusAusenciaUsuario(){
-                    const banco=limparAusenciasExpiradas();
+                    const banco=lerJSON('bancoAusenciasBPE',[]);
                     const id=String(localStorage.getItem('idLogado')||'');
-                    const nome=normalizarTexto(localStorage.getItem('usuarioLogado')||'');
                     const userBadge=document.querySelector('.user-badge');if(!userBadge)return;
                     document.getElementById('legenda-ausente-vtr')?.remove();
-                    const pm={id,usuario:nome,nome};
-                    const aus=obterAusenciaAtivaDoPolicial(pm,banco);
+                    const hoje=new Date();hoje.setHours(0,0,0,0);
+                    const aus=banco.find(a=>String(a.policialId)===id&&hoje>=new Date(a.inicio+'T00:00:00')&&hoje<=new Date(a.fim+'T00:00:00'));
                     if(aus){const label=document.createElement('span');label.id='legenda-ausente-vtr';label.textContent='[AUSÊNCIA JUSTIFICADA]';label.style.cssText='color:#ff1744;font-size:11px;font-weight:bold;margin-top:2px;display:block;';userBadge.appendChild(label);}
                 }
 
