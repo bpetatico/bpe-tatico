@@ -139,7 +139,6 @@
                 <div style="font-size:10px;color:#d6ad00;font-weight:800;letter-spacing:1.2px;margin-top:-2px;">CAVEIRA</div>
                 <div class="user-badge">
                     <p id="user-display">Carregando...</p>
-                    <p id="user-patente" style="margin:3px 0 0;color:#ffcc00;font-size:11px;font-weight:800;letter-spacing:.3px;">PATENTE: --</p>
                     <span id="tag-estagio" class="badge-estagio hidden">ESTÁGIO</span>
                 </div>
             </div>
@@ -856,6 +855,8 @@
                 const ok = await sincronizarBancoBPE({ force: true });
                 if (ok && typeof atualizarTabelasGerais === 'function') {
                     try {
+                        if (typeof sincronizarUsuarioAtualNaTela === 'function') sincronizarUsuarioAtualNaTela();
+                        verificarAcessoPainelAdministrativoGeral();
                         if (typeof renderizarHierarquiaGeral === 'function') renderizarHierarquiaGeral();
                         if (typeof renderizarBoletinsECommunicados === 'function') renderizarBoletinsECommunicados();
                         if (typeof renderizarMuralHerois === 'function') renderizarMuralHerois();
@@ -1090,29 +1091,28 @@
                 }
 
                 function usuarioEhAltoComando() {
-                    if (localStorage.getItem('acessoSupremo') === 'true') return true;
+                    // A patente registrada no banco compartilhado é a fonte de verdade.
+                    // Se alguém do Alto Comando for promovido/rebaixado para Capitão
+                    // ou qualquer patente inferior, perde imediatamente os poderes administrativos.
+                    const pm = obterUsuarioAtualBanco();
 
-                    // Alguns logins guardam a função como "Alto Comando",
-                    // "Comando Geral" ou "Sub Comando Geral" em cargoUsuario.
-                    // Esses cargos também devem abrir o painel administrativo.
+                    if (pm) {
+                        const patente = obterPatenteDoPolicial(pm);
+                        return obterGrupoPatente(patente) === 'alto-comando';
+                    }
+
+                    // Fallback apenas para sessões antigas em que o usuário ainda não
+                    // está disponível no cache local. Assim que o banco for carregado,
+                    // a patente registrada nele passa a prevalecer.
                     const cargo = normalizarTexto(localStorage.getItem('cargoUsuario') || '');
-                    if (
+                    return (
                         cargo.includes('alto comando') ||
                         cargo.includes('comando geral') ||
                         cargo.includes('sub comando geral') ||
                         cargo === 'coronel' ||
                         cargo === 'tenente coronel' ||
                         cargo === 'major'
-                    ) return true;
-
-                    const pm = obterUsuarioAtualBanco();
-                    const patente = obterPatenteDoPolicial(
-                        pm || {
-                            usuario: localStorage.getItem('usuarioLogado') || '',
-                            patente: localStorage.getItem('cargoUsuario') || ''
-                        }
                     );
-                    return obterGrupoPatente(patente) === 'alto-comando';
                 }
 
                 // O painel é do Alto Comando; não exige a flag antiga "acessoSupremo".
@@ -1301,9 +1301,7 @@
                         localStorage.setItem('usuarioLogado', nomeBanco);
                         const userDisplay = document.getElementById('user-display');
                         const pontoNome = document.getElementById('ponto-nome');
-                        const userPatente = document.getElementById('user-patente');
                         if (userDisplay) userDisplay.textContent = nomeBanco;
-                        if (userPatente) userPatente.textContent = `PATENTE: ${patenteBanco}`;
                         if (pontoNome) pontoNome.textContent = nomeBanco;
                     }
                     localStorage.setItem('idLogado', String(pm.id));
