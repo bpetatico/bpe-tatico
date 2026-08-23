@@ -139,6 +139,7 @@
                 <div style="font-size:10px;color:#d6ad00;font-weight:800;letter-spacing:1.2px;margin-top:-2px;">CAVEIRA</div>
                 <div class="user-badge">
                     <p id="user-display">Carregando...</p>
+                    <p id="user-patente" style="margin:3px 0 0;color:#ffcc00;font-size:11px;font-weight:800;letter-spacing:.3px;">PATENTE: --</p>
                     <span id="tag-estagio" class="badge-estagio hidden">ESTÁGIO</span>
                 </div>
             </div>
@@ -1165,6 +1166,9 @@
                     const usuario = pmAtual?.usuario || localStorage.getItem('usuarioLogado') || 'Policial';
                     const id = pmAtual?.id || localStorage.getItem('idLogado') || '0000';
                     document.getElementById('user-display').textContent = usuario;
+                    const patenteInicial = pmAtual ? obterPatenteDoPolicial(pmAtual) : (localStorage.getItem('cargoUsuario') || '--');
+                    const userPatenteInicial = document.getElementById('user-patente');
+                    if (userPatenteInicial) userPatenteInicial.textContent = `PATENTE: ${patenteInicial}`;
                     document.getElementById('ponto-nome').textContent = usuario;
                     document.getElementById('ponto-id').textContent = id;
                     carregarDadosPessoais();
@@ -1270,14 +1274,18 @@
                     if (!pm) return null;
 
                     const nomeBanco = String(pm.usuario || pm.nome || '').trim();
+                    const patenteBanco = obterPatenteDoPolicial(pm);
                     if (nomeBanco) {
                         localStorage.setItem('usuarioLogado', nomeBanco);
                         const userDisplay = document.getElementById('user-display');
                         const pontoNome = document.getElementById('ponto-nome');
+                        const userPatente = document.getElementById('user-patente');
                         if (userDisplay) userDisplay.textContent = nomeBanco;
+                        if (userPatente) userPatente.textContent = `PATENTE: ${patenteBanco}`;
                         if (pontoNome) pontoNome.textContent = nomeBanco;
                     }
                     localStorage.setItem('idLogado', String(pm.id));
+                    localStorage.setItem('cargoUsuario', patenteBanco);
                     const pontoId = document.getElementById('ponto-id');
                     if (pontoId) pontoId.textContent = String(pm.id);
                     return pm;
@@ -1326,7 +1334,7 @@
                     idPolicialSelecionadoGeral = null;
                 }
 
-                function dispararAcaoPromocao(acao) {
+                async function dispararAcaoPromocao(acao) {
                     if (!podeGerenciarPainelAltoComando()) {
                         fecharMenuGestaoMilitar();
                         alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");
@@ -1432,6 +1440,9 @@
                     }
 
                     salvarJSON('bancoUsuariosBPE', lista);
+                    // Garante que promoção/rebaixamento chegue ao banco compartilhado antes de
+                    // encerrar a operação, evitando que outro navegador continue vendo a patente antiga.
+                    try { await bpeSalvarNuvem('bancoUsuariosBPE', lista); } catch (e) { console.error('[BPE] Falha ao sincronizar efetivo após alteração de patente:', e); }
                     sincronizarUsuarioAtualNaTela();
                     fecharMenuGestaoMilitar();
                     atualizarTagEstagioUsuario();
