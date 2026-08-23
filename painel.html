@@ -382,8 +382,14 @@
                         <div class="form-section-title" style="color: #0052cc;">📜 HISTÓRICO</div>
                         <textarea id="rel-historico" class="full-width-textarea" placeholder="Histórico..." required></textarea>
                         <div class="input-row-2">
-                            <input type="number" id="rel-bopm" value="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
-                            <input type="number" id="rel-obitos" value="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
+                            <div class="input-group">
+                                <label>📋 QUANTIDADE DE BOPMs REALIZADOS</label>
+                                <input type="number" id="rel-bopm" value="0" min="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
+                            </div>
+                            <div class="input-group">
+                                <label>⚰️ QUANTIDADE DE ÓBITOS</label>
+                                <input type="number" id="rel-obitos" value="0" min="0" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px;">
+                            </div>
                         </div>
                         <input type="text" id="rel-materiais" placeholder="Materiais..." style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
                         <div class="input-row-2" style="margin-top: 15px;"><button type="submit" class="btn-ponto iniciar">ENVIAR RSO</button><button type="button" class="btn-logout" onclick="cancelarRSO()">CANCELAR</button></div>
@@ -411,7 +417,8 @@
                         <input type="text" id="gui-motivo" placeholder="Motivo" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
                         <input type="text" id="gui-responsavel" placeholder="Responsável" required style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;">
                         <div class="input-group" style="width: 100%;">
-                            <label>Anexar Foto do Veículo</label>
+                            <label>📸 FOTO DO VEÍCULO — ARQUIVO OU CTRL + V</label>
+                            <div style="color:#aaa;font-size:12px;margin-bottom:6px;">Você pode selecionar uma imagem ou abrir o formulário e pressionar <strong>Ctrl + V</strong> para colar o print.</div>
                             <input type="file" id="gui-foto-arquivo" accept="image/*" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%;" onchange="processarFotoVeiculo(this)">
                             <img id="gui-preview-img" src="" class="hidden" style="max-height: 150px; margin-top: 10px; border-radius: 6px; border: 1px solid #ffcc00; display: block;">
                             <input type="hidden" id="gui-foto-base64">
@@ -863,7 +870,22 @@
                     } catch (_) {}
                 }
             }
-        }, 15000);
+        }, 3000);
+
+        // Quando o usuário volta para a aba, faz uma leitura imediata do banco compartilhado.
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible') {
+                const ok = await sincronizarBancoBPE({ force: true });
+                if (ok) {
+                    try {
+                        if (typeof sincronizarUsuarioAtualNaTela === 'function') sincronizarUsuarioAtualNaTela();
+                        if (typeof atualizarTabelasGerais === 'function') atualizarTabelasGerais();
+                        if (typeof renderizarMuralRSO === 'function') renderizarMuralRSO();
+                        if (typeof renderizarHierarquiaGeral === 'function') renderizarHierarquiaGeral();
+                    } catch (_) {}
+                }
+            }
+        });
     </script>
     <script>
                 let timerIntervalo;
@@ -1727,7 +1749,22 @@
                         const duracaoFinal=`${Math.floor(min/60)}h ${min%60}min`;
                         if (txtTotal) txtTotal.textContent=duracaoFinal;
                         const lista=lerJSON('historicoPontosBPE',[]);
-                        lista.unshift({policial:localStorage.getItem('usuarioLogado'),id:localStorage.getItem('idLogado'),data,saida:hora,segundos:segundosAtivos,total:duracaoFinal});
+                        const inicioSalvo=localStorage.getItem('pontoHoraInicio') || '';
+                        const partesInicio=inicioSalvo.match(/^(\d{2}\/\d{2}\/\d{4})\s+às\s+(\d{2}:\d{2}:\d{2})$/);
+                        const entradaData=partesInicio ? partesInicio[1] : data;
+                        const entradaHora=partesInicio ? partesInicio[2] : '--:--:--';
+                        lista.unshift({
+                            policial:localStorage.getItem('usuarioLogado'),
+                            id:localStorage.getItem('idLogado'),
+                            data,
+                            entradaData,
+                            entradaHora,
+                            saidaData:data,
+                            saida:hora,
+                            segundos:segundosAtivos,
+                            total:duracaoFinal,
+                            registradoEm:new Date().toISOString()
+                        });
                         salvarJSON('historicoPontosBPE',lista);
                         localStorage.removeItem('pontoEstado');
                         localStorage.removeItem('pontoHoraInicio');
@@ -2020,16 +2057,43 @@ function removerPrintApreensao(indice){
                     navegarAba('rankings-aba');
                 }
 
-                // Ctrl+V / colar imagem diretamente no menu de apreensões.
+                // Ctrl+V / colar imagem diretamente no menu de apreensões ou no formulário de guincho.
                 document.addEventListener('paste', function(event){
-                    const aba=document.getElementById('content-apreensoes');
-                    if(!aba || aba.classList.contains('hidden')) return;
-                    const itens=Array.from(event.clipboardData?.items||[]), imagem=itens.find(item=>item.type&&item.type.startsWith('image/'));
+                    const itens=Array.from(event.clipboardData?.items||[]);
+                    const imagem=itens.find(item=>item.type&&item.type.startsWith('image/'));
                     if(!imagem) return;
-                    event.preventDefault();
-                    const file=imagem.getAsFile();
-                    if(file) processarImagemApreensao(file);
+
+                    const abaApre=document.getElementById('content-apreensoes');
+                    if(abaApre && !abaApre.classList.contains('hidden')){
+                        event.preventDefault();
+                        const file=imagem.getAsFile();
+                        if(file) processarImagemApreensao(file);
+                        return;
+                    }
+
+                    const abaRel=document.getElementById('content-relatorios');
+                    const caixaGui=document.getElementById('caixa-formulario-guincho');
+                    if(abaRel && !abaRel.classList.contains('hidden') && caixaGui && !caixaGui.classList.contains('hidden')){
+                        event.preventDefault();
+                        const file=imagem.getAsFile();
+                        if(file) processarFotoVeiculoArquivo(file);
+                    }
                 });
+
+                function processarFotoVeiculoArquivo(file){
+                    if(!file) return;
+                    const leitor=new FileReader();
+                    leitor.onload=e=>{
+                        const base=document.getElementById('gui-foto-base64');
+                        const preview=document.getElementById('gui-preview-img');
+                        if(base) base.value=e.target.result;
+                        if(preview){
+                            preview.src=e.target.result;
+                            preview.classList.remove('hidden');
+                        }
+                    };
+                    leitor.readAsDataURL(file);
+                }
 
                 function simularLeituraOCR(input){ adicionarPrintsApreensao(input); }
 
@@ -2038,7 +2102,7 @@ function removerPrintApreensao(indice){
                 function exibirFormularioGuincho(){document.getElementById('caixa-formulario-rso')?.classList.add('hidden');document.getElementById('caixa-formulario-guincho')?.classList.remove('hidden');}
                 function cancelarRSO(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-operacional')?.reset();document.getElementById('caixa-formulario-rso')?.classList.add('hidden');}}
                 function cancelarGuincho(){if(confirm("Limpar rascunho?")){document.getElementById('form-registro-guincho')?.reset();document.getElementById('gui-preview-img')?.classList.add('hidden');document.getElementById('gui-foto-base64').value="";document.getElementById('caixa-formulario-guincho')?.classList.add('hidden');}}
-                function processarFotoVeiculo(input){if(input.files?.[0]){const leitor=new FileReader();leitor.onload=e=>{document.getElementById('gui-foto-base64').value=e.target.result;const p=document.getElementById('gui-preview-img');p.src=e.target.result;p.classList.remove('hidden');};leitor.readAsDataURL(input.files[0]);}}
+                function processarFotoVeiculo(input){if(input.files?.[0]) processarFotoVeiculoArquivo(input.files[0]);}
                 function publicarRelatorioRSO(event){
                     event.preventDefault();
                     const banco=lerJSON('bancoRelatoriosBPE',[]);
@@ -2058,8 +2122,8 @@ function removerPrintApreensao(indice){
                     feed.innerHTML="";
                     banco.forEach(rel=>{
                         const card=document.createElement('div');card.className="boletim-item";card.style.cssText="background:#2c2c2e;padding:20px;border-radius:8px;margin-bottom:15px;position:relative;";
-                        const btn=`<button onclick="deletarRelatorioPeloComando('${rel.id}')" style="position:absolute;top:15px;right:15px;background:#ff1744;border:0;color:#fff;padding:6px 12px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🗑️ EXCLUIR</button>`;
-                        if(rel.tipo==="RSO"||rel.batalhao){card.style.borderLeft="5px solid #0052cc";const eq=(rel.guarnicao||[]).map((h,i)=>`<br>• ${i+1}º Homem: ${h}`).join('');card.innerHTML=`${btn}<span style="color:#0052cc;font-weight:bold;font-size:12px;">📋 RSO por ${rel.policialCriador}</span><h4>VTR ${rel.prefixo} | Batalhão: ${rel.batalhao}</h4><p style="background:#1c1c1e;padding:10px;border-radius:6px;font-size:13px;"><strong>👥 GUARNIÇÃO:</strong>${eq}</p><p style="margin-top:10px;font-size:14px;white-space:pre-wrap;"><strong>📜 HISTÓRICO:</strong><br>${rel.historico}</p>`;}
+                        const btn=usuarioEhAltoComando()?`<button onclick="deletarRelatorioPeloComando('${rel.id}')" style="position:absolute;top:15px;right:15px;background:#ff1744;border:0;color:#fff;padding:6px 12px;border-radius:4px;font-weight:bold;cursor:pointer;font-size:11px;">🗑️ EXCLUIR</button>`:'';
+                        if(rel.tipo==="RSO"||rel.batalhao){card.style.borderLeft="5px solid #0052cc";const eq=(rel.guarnicao||[]).map((h,i)=>`<br>• ${i+1}º Homem: ${h}`).join('');card.innerHTML=`${btn}<span style="color:#0052cc;font-weight:bold;font-size:12px;">📋 RSO por ${rel.policialCriador}</span><h4>VTR ${rel.prefixo} | Batalhão: ${rel.batalhao}</h4><p style="background:#1c1c1e;padding:10px;border-radius:6px;font-size:13px;"><strong>👥 GUARNIÇÃO:</strong>${eq}</p><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;"><span style="background:#111;padding:8px 10px;border-radius:6px;border-left:3px solid #0052cc;"><strong>📋 BOPMs:</strong> ${rel.bopm??0}</span><span style="background:#111;padding:8px 10px;border-radius:6px;border-left:3px solid #ff1744;"><strong>⚰️ ÓBITOS:</strong> ${rel.obitos??0}</span></div><p style="margin-top:10px;font-size:14px;white-space:pre-wrap;"><strong>📜 HISTÓRICO:</strong><br>${rel.historico}</p>`;}
                         else{card.style.borderLeft="5px solid #ffcc00";const img=rel.foto?`<br><img src="${rel.foto}" style="max-height:150px;margin-top:10px;border-radius:6px;border:1px solid #ffcc00;">`:"";card.innerHTML=`${btn}<span style="color:#ffcc00;font-weight:bold;font-size:12px;">🚛 GUINCHO por ${rel.policialCriador}</span><h4>VEÍCULO: ${rel.veiculo} | PLACA: ${rel.placa}</h4><p style="font-size:13px;">👤 Dono: ${rel.dono} | Trajeto: ${rel.retirada} até ${rel.destino}</p><p style="margin-top:10px;"><strong>⚠️ INFRAÇÃO:</strong> ${rel.motivo}</p>${img}`;}
                         feed.appendChild(card);
                     });
@@ -2457,12 +2521,18 @@ function removerPrintApreensao(indice){
                 function atualizarTabelasGerais(){
                     const pontos=lerJSON('historicoPontosBPE',[]);
                     const feed=document.getElementById('feed-publico-pontos');
-                    if(feed)feed.innerHTML=pontos.map(p=>`<div class="ponto-post-publico"><strong>👮‍♂️ ${p.policial}</strong><br><span>⏳ Turno: ${p.total}</span></div>`).join('')||'<p class="sem-registro">Nenhum turno finalizado recentemente.</p>';
+                    if(feed)feed.innerHTML=pontos.map(p=>{
+                        const dataEntrada=p.entradaData||p.data||'--/--/----';
+                        const horaEntrada=p.entradaHora||'--:--:--';
+                        const dataSaida=p.saidaData||p.data||'--/--/----';
+                        const horaSaida=p.saida||'--:--:--';
+                        return `<div class="ponto-post-publico"><strong>👮‍♂️ ${p.policial}</strong><br><span>📅 Data: ${dataEntrada}</span><br><span>🛫 Entrada: ${horaEntrada}</span><br><span>🛬 Saída: ${dataSaida} às ${horaSaida}</span><br><span>⏳ Total de serviço: ${p.total||'0h 0min'}</span></div>`;
+                    }).join('')||'<p class="sem-registro">Nenhum turno finalizado recentemente.</p>';
 
                     const tAtiv=document.getElementById('tabela-ranking-atividade');
                     if(tAtiv){
                         const cons={};
-                        pontos.forEach(p=>{const k=`${p.policial} (ID: ${p.id})`;if(!cons[k])cons[k]={seg:0,ult:p.data&&p.saida?`${p.data} às ${p.saida}`:(p.saida||"Sem registro")};cons[k].seg+=parseInt(p.segundos)||0;});
+                        pontos.forEach(p=>{const k=`${p.policial} (ID: ${p.id})`;if(!cons[k])cons[k]={seg:0,ult:(p.saidaData||p.data)&&p.saida?`${p.saidaData||p.data} às ${p.saida}`:(p.saida||"Sem registro")};cons[k].seg+=parseInt(p.segundos)||0;});
                         const arr=Object.keys(cons).map(k=>({n:k,s:cons[k].seg,u:cons[k].ult})).sort((a,b)=>b.s-a.s);
                         tAtiv.innerHTML=arr.map((p,i)=>`<tr><td><strong>${i+1}º</strong></td><td>${p.n}</td><td>${p.u}</td><td style="color:#ffcc00;font-weight:bold;">${Math.floor(p.s/3600)}h ${Math.floor((p.s%3600)/60)}m</td></tr>`).join('')||'<tr><td colspan="4" class="sem-registro">Nenhum plantão registrado.</td></tr>';
                     }
