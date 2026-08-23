@@ -343,7 +343,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
 
             <!-- ====== ABA 6: CENTRAL DE RELATÓRIOS (RSO / GUINCHO) ====== -->
             <div id="content-relatorios" class="aba-conteudo hidden">
@@ -1592,8 +1591,13 @@
                         const idPolicial = String(pm.id || "0000");
                         const nomeCompleto = String(pm.usuario || pm.nome || "POLICIAL").trim();
 
+                        const normalizarTextoAusencia = valor => String(valor || '').trim().toLowerCase().replace(/\s+/g, ' ');
+                        const nomeParaAusencia = normalizarTextoAusencia(nomeCompleto);
                         const aus = bancoAusencias.find(a => {
-                            if (String(a.policialId) !== idPolicial) return false;
+                            const idB = String(a.policialId || '').trim();
+                            const nomeB = normalizarTextoAusencia(a.nome);
+                            const mesmaPessoa = idB === idPolicial || (nomeB && nomeB === nomeParaAusencia);
+                            if (!mesmaPessoa) return false;
                             const di = new Date(a.inicio + 'T00:00:00');
                             const df = new Date(a.fim + 'T00:00:00');
                             return hoje >= di && hoje <= df;
@@ -2096,7 +2100,11 @@ function removerPrintApreensao(indice){
                     const userBadge=document.querySelector('.user-badge');if(!userBadge)return;
                     document.getElementById('legenda-ausente-vtr')?.remove();
                     const hoje=new Date();hoje.setHours(0,0,0,0);
-                    const aus=banco.find(a=>String(a.policialId)===id&&hoje>=new Date(a.inicio+'T00:00:00')&&hoje<=new Date(a.fim+'T00:00:00'));
+                    const nomeAtual=String(localStorage.getItem('usuarioLogado')||'').trim().toLowerCase().replace(/\s+/g,' ');
+                    const aus=banco.find(a=>{
+                        const mesmaPessoa=String(a.policialId||'').trim()===id || (String(a.nome||'').trim().toLowerCase().replace(/\s+/g,' ')===nomeAtual && nomeAtual);
+                        return mesmaPessoa&&hoje>=new Date(a.inicio+'T00:00:00')&&hoje<=new Date(a.fim+'T00:00:00');
+                    });
                     if(aus){const label=document.createElement('span');label.id='legenda-ausente-vtr';label.textContent='[AUSÊNCIA JUSTIFICADA]';label.style.cssText='color:#ff1744;font-size:11px;font-weight:bold;margin-top:2px;display:block;';userBadge.appendChild(label);}
                 }
 
