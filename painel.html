@@ -1123,11 +1123,6 @@
                     });
                     const admin = document.getElementById('btn-admin');
                     if (admin) admin.style.display = liberado && usuarioEhAltoComando() ? '' : 'none';
-                    if (liberado && usuarioEhAltoComando()) {
-                        document.querySelectorAll('.sidebar-menu .menu-btn').forEach(btn => {
-                            if (btn.id !== 'btn-menu-acesso') btn.style.display = '';
-                        });
-                    }
                     if (!liberado) {
                         document.querySelectorAll('.aba-conteudo').forEach(a => { a.classList.add('hidden'); });
                         document.getElementById('content-acesso')?.classList.remove('hidden');
@@ -1189,37 +1184,8 @@
                         renderizarNecroteca();
                     }
                     verificarAcessoPainelAdministrativoGeral();
-                    garantirMenusAltoComandoRenderizados();
                     inserirBotoesApagarNosMenus();
                 });
-
-                // Garante que o Alto Comando tenha acesso visual às mesmas abas dos membros.
-                // Não recria nem substitui os menus: apenas força a renderização dos conteúdos
-                // já existentes no arquivo quando o usuário possui permissão de Alto Comando.
-                function garantirMenusAltoComandoRenderizados() {
-                    if (!usuarioEhAltoComando()) return;
-                    const renderizadores = {
-                        inicio: renderizarBoletinsECommunicados,
-                        herois: renderizarMuralHerois,
-                        'rankings-aba': atualizarTabelasGerais,
-                        ponto: atualizarTabelasGerais,
-                        apreensoes: () => { renderizarHistoricoApreensoes(); atualizarTabelasGerais(); atualizarFilaApreensoes(); },
-                        relatorios: renderizarMuralRSO,
-                        ausencias: () => { renderizarMuralAusencias(); verificarStatusAusenciaUsuario(); },
-                        historia: renderizarHistoriaBPE,
-                        necroteca: renderizarNecroteca,
-                        hierarquia: () => { renderizarHierarquiaGeral(); atualizarTagEstagioUsuario(); },
-                        dados: carregarDadosPessoais,
-                        coronel: () => {
-                            renderizarBoletinsECommunicados();
-                            renderizarSolicitacoesAcesso();
-                            renderizarPainelApagarTudo();
-                            renderizarMuralHerois();
-                            renderizarAdminHerois();
-                        }
-                    };
-                    Object.values(renderizadores).forEach(fn => { try { fn?.(); } catch (e) { console.error('[BPE] Renderização AC:', e); } });
-                }
 
                 function navegarAba(abaNome) {
                     if (!usuarioTemAcessoOperacional() && abaNome !== 'acesso') {
@@ -1275,7 +1241,6 @@
                         }
                     };
                     try { renderizadores[abaNome]?.(); } catch (e) { console.error('[BPE] Erro ao renderizar aba', abaNome, e); }
-                    if (usuarioEhAltoComando()) { try { renderizadores[abaNome]?.(); } catch (e) { console.error('[BPE] Erro AC ao renderizar aba', abaNome, e); } }
 
                     requestAnimationFrame(() => {
                         const principal = document.querySelector('.main-content');
@@ -1628,9 +1593,7 @@
                         const nomeCompleto = String(pm.usuario || pm.nome || "POLICIAL").trim();
 
                         const aus = bancoAusencias.find(a => {
-                            const mesmoId = String(a.policialId || '') === idPolicial;
-                            const mesmoNome = normalizarTexto(a.nome || '') === normalizarTexto(nomeCompleto);
-                            if (!mesmoId && !mesmoNome) return false;
+                            if (String(a.policialId) !== idPolicial) return false;
                             const di = new Date(a.inicio + 'T00:00:00');
                             const df = new Date(a.fim + 'T00:00:00');
                             return hoje >= di && hoje <= df;
@@ -2133,12 +2096,7 @@ function removerPrintApreensao(indice){
                     const userBadge=document.querySelector('.user-badge');if(!userBadge)return;
                     document.getElementById('legenda-ausente-vtr')?.remove();
                     const hoje=new Date();hoje.setHours(0,0,0,0);
-                    const nomeAtual = normalizarTexto(localStorage.getItem('usuarioLogado') || '');
-                    const aus=banco.find(a=>{
-                        const mesmoId=String(a.policialId||'')===id;
-                        const mesmoNome=normalizarTexto(a.nome||'')===nomeAtual;
-                        return (mesmoId||mesmoNome)&&hoje>=new Date(a.inicio+'T00:00:00')&&hoje<=new Date(a.fim+'T00:00:00');
-                    });
+                    const aus=banco.find(a=>String(a.policialId)===id&&hoje>=new Date(a.inicio+'T00:00:00')&&hoje<=new Date(a.fim+'T00:00:00'));
                     if(aus){const label=document.createElement('span');label.id='legenda-ausente-vtr';label.textContent='[AUSÊNCIA JUSTIFICADA]';label.style.cssText='color:#ff1744;font-size:11px;font-weight:bold;margin-top:2px;display:block;';userBadge.appendChild(label);}
                 }
 
