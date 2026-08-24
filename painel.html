@@ -135,7 +135,7 @@
                         <path d="M50 19v8 M46 23h8" stroke="#111" stroke-width="1.5"/>
                     </svg>
                 </div>
-                <h2>BPE OPERACIONAL</h2>
+                <h2>BPE TÁTICO</h2>
                 <div style="font-size:10px;color:#d6ad00;font-weight:800;letter-spacing:1.2px;margin-top:-2px;">CAVEIRA</div>
                 <div class="user-badge">
                     <p id="user-display">Carregando...</p>
@@ -921,6 +921,7 @@
                 let segundosAtivos = 0;
                 let pontoAberto = false;
                 let idPolicialSelecionadoGeral = null;
+                let bpeAcaoGestaoEmAndamento = false;
 
                 const PATENTES = [
                     { nome: "SOLDADO 2ª CLASSE", grupo: "pracas" },
@@ -1349,20 +1350,32 @@
                     else tag.classList.add('hidden');
                 }
 
-                function abrirGestaoMilitarSeComando(idPolicial, nomePolicial) {
+                async function abrirGestaoMilitarSeComando(idPolicial, nomePolicial) {
                     if (!podeGerenciarPainelAltoComando()) {
                         alert("🔒 Somente o Alto Comando pode gerenciar o efetivo.");
                         return;
                     }
+                    if (bpeAcaoGestaoEmAndamento) return;
 
-                    const lista = lerJSON('bancoUsuariosBPE', []);
-                    const pm = lista.find(x => String(x.id) === String(idPolicial));
+                    const id = String(idPolicial);
+                    // Busca especificamente o efetivo antes de abrir o menu. Isso evita abrir
+                    // um policial com uma cópia antiga que ainda esteja no localStorage.
+                    let lista = lerJSON('bancoUsuariosBPE', []);
+                    try {
+                        const {data, error} = await bpeSupabase.from('bpe_store').select('valor,atualizado_em').eq('chave','bancoUsuariosBPE').maybeSingle();
+                        if (!error && data && Array.isArray(data.valor)) {
+                            lista = data.valor;
+                            localStorage.setItem('bancoUsuariosBPE', JSON.stringify(lista));
+                        }
+                    } catch (_) {}
+
+                    const pm = lista.find(x => String(x.id) === id);
                     if (!pm) {
                         alert("Policial não encontrado no banco de efetivo.");
                         return;
                     }
 
-                    idPolicialSelecionadoGeral = String(pm.id);
+                    idPolicialSelecionadoGeral = id;
                     document.getElementById('gestao-pm-nome').textContent = String(pm.usuario || pm.nome || nomePolicial).toUpperCase();
                     document.getElementById('gestao-pm-id').textContent = `ID DO JOGO: ${pm.id}`;
                     document.getElementById('gestao-pm-patente').textContent = `PATENTE: ${obterPatenteDoPolicial(pm)}`;
@@ -1382,124 +1395,130 @@
                 }
 
                 async function dispararAcaoPromocao(acao) {
+                    if (bpeAcaoGestaoEmAndamento) return;
                     if (!podeGerenciarPainelAltoComando()) {
                         fecharMenuGestaoMilitar();
                         alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");
                         return;
                     }
+                    const idAlvo = String(idPolicialSelecionadoGeral || '');
+                    if (!idAlvo) return;
 
-                    if (!idPolicialSelecionadoGeral) return;
+                    bpeAcaoGestaoEmAndamento = true;
+                    const botoes = document.querySelectorAll('#popup-gestao-militar button');
+                    botoes.forEach(b => { b.disabled = true; b.style.opacity = '.55'; b.style.pointerEvents = 'none'; });
 
-                    // Sempre releia o efetivo compartilhado antes da ação.
-                    // Isso evita que uma cópia antiga do navegador faça a patente "voltar"
-                    // ou que o popup opere sobre um registro desatualizado.
-                    try { await bpeForcarSincronizacao(); } catch (_) {}
-                    let lista = lerJSON('bancoUsuariosBPE', []);
-                    const idAlvo = String(idPolicialSelecionadoGeral);
-                    const indice = lista.findIndex(pm => String(pm.id) === idAlvo);
-                    if (indice === -1) {
-                        alert("Policial não encontrado.");
-                        return;
-                    }
+                    try {
+                        // Leitura direta e exclusiva do efetivo: não usa uma cópia antiga do
+                        // localStorage nem espera uma sincronização periódica que possa estar em curso.
+                        let lista = lerJSON('bancoUsuariosBPE', []);
+                        try {
+                            const {data, error} = await bpeSupabase.from('bpe_store').select('valor').eq('chave','bancoUsuariosBPE').maybeSingle();
+                            if (!error && data && Array.isArray(data.valor)) {
+                                lista = data.valor;
+                                localStorage.setItem('bancoUsuariosBPE', JSON.stringify(lista));
+                            }
+                        } catch (_) {}
 
-                    const pm = lista[indice];
-                    const patenteAtual = obterPatenteDoPolicial(pm);
-                    const patenteCanonica = normalizarPatenteCanonica(patenteAtual) || "SOLDADO 2ª CLASSE";
-                    const posicaoAtual = PATENTES.findIndex(p => normalizarTexto(p.nome) === normalizarTexto(patenteCanonica));
-                    if (posicaoAtual < 0) {
-                        alert(`⚠️ Não foi possível identificar a patente atual de ${pm.usuario || pm.nome}. O sistema encontrou: ${patenteAtual}.`);
-                        return;
-                    }
-
-                    if (acao === 'promover') {
-                        if (posicaoAtual < 0 || posicaoAtual >= PATENTES.length - 1) {
-                            alert("⚠️ Este policial já está na patente máxima.");
+                        const indice = lista.findIndex(pm => String(pm.id) === idAlvo);
+                        if (indice === -1) {
+                            alert('Policial não encontrado no banco compartilhado.');
                             return;
                         }
-                        const novaPatente = PATENTES[posicaoAtual + 1].nome;
-                        if (!confirm(`Promover ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
-                        pm.patente = novaPatente;
-                        pm.cargo = novaPatente;
-                        pm.usuario = montarNomeComPatente(pm, novaPatente);
-                        pm.nome = pm.usuario;
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} promoveu ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
-                    }
 
-                    if (acao === 'rebaixar') {
-                        if (posicaoAtual <= 0) {
-                            alert("⚠️ Este policial já está na menor patente configurada.");
+                        const pm = lista[indice];
+                        const patenteAtual = obterPatenteDoPolicial(pm);
+                        const patenteCanonica = normalizarPatenteCanonica(patenteAtual) || 'SOLDADO 2ª CLASSE';
+                        const posicaoAtual = PATENTES.findIndex(p => normalizarTexto(p.nome) === normalizarTexto(patenteCanonica));
+                        if (posicaoAtual < 0) {
+                            alert(`⚠️ Não foi possível identificar a patente atual de ${pm.usuario || pm.nome}. O sistema encontrou: ${patenteAtual}.`);
                             return;
                         }
-                        const novaPatente = PATENTES[posicaoAtual - 1].nome;
-                        if (!confirm(`Rebaixar ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
-                        pm.patente = novaPatente;
-                        pm.cargo = novaPatente;
-                        pm.usuario = montarNomeComPatente(pm, novaPatente);
-                        pm.nome = pm.usuario;
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} rebaixou ${pm.usuario} (ID ${pm.id}) de ${patenteAtual} para ${novaPatente}.`);
-                    }
 
-                    if (acao === 'estagio') {
-                        if (pm.situacaoEstagio === 'sim') {
-                            alert("🟡 Este policial já está em estágio.");
-                            return;
-                        }
-                        pm.situacaoEstagio = 'sim';
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} colocou ${pm.usuario} (ID ${pm.id}) em ESTÁGIO.`);
-                    }
+                        let alterou = false;
+                        let novaPatente = patenteCanonica;
 
-                    if (acao === 'remover-estagio') {
-                        if (pm.situacaoEstagio !== 'sim') {
-                            alert("Este policial não está em estágio.");
-                            return;
-                        }
-                        pm.situacaoEstagio = 'nao';
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} removeu ${pm.usuario} (ID ${pm.id}) do ESTÁGIO.`);
-                    }
+                        if (acao === 'promover') {
+                            if (posicaoAtual >= PATENTES.length - 1) { alert('⚠️ Este policial já está na patente máxima.'); return; }
+                            novaPatente = PATENTES[posicaoAtual + 1].nome;
+                            if (!confirm(`Promover ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
+                            pm.patente = novaPatente;
+                            pm.cargo = novaPatente;
+                            pm.usuario = montarNomeComPatente(pm, novaPatente);
+                            pm.nome = pm.usuario;
+                            alterou = true;
+                        } else if (acao === 'rebaixar') {
+                            if (posicaoAtual <= 0) { alert('⚠️ Este policial já está na menor patente configurada.'); return; }
+                            novaPatente = PATENTES[posicaoAtual - 1].nome;
+                            if (!confirm(`Rebaixar ${pm.usuario || pm.nome} de ${patenteAtual} para ${novaPatente}?`)) return;
+                            pm.patente = novaPatente;
+                            pm.cargo = novaPatente;
+                            pm.usuario = montarNomeComPatente(pm, novaPatente);
+                            pm.nome = pm.usuario;
+                            alterou = true;
+                        } else if (acao === 'estagio') {
+                            if (pm.situacaoEstagio === 'sim') { alert('🟡 Este policial já está em estágio.'); return; }
+                            pm.situacaoEstagio = 'sim';
+                            alterou = true;
+                        } else if (acao === 'remover-estagio') {
+                            if (pm.situacaoEstagio !== 'sim') { alert('Este policial não está em estágio.'); return; }
+                            pm.situacaoEstagio = 'nao';
+                            alterou = true;
+                        } else if (acao === 'exonerar') {
+                            if (!confirm(`🚨 EXONERAÇÃO\n\nTem certeza que deseja exonerar ${pm.usuario || pm.nome} (ID ${pm.id})?\n\nO policial será removido do efetivo e não poderá entrar novamente sem autorização do Alto Comando.`)) return;
+                            const exonerados = lerJSON('bancoExoneradosBPE', []);
+                            const registro = { id:String(pm.id), usuario:pm.usuario || pm.nome, data:new Date().toLocaleString('pt-BR'), exoneradoPor:localStorage.getItem('usuarioLogado') || 'Alto Comando', retornouAoBatalhao:false, retornoAprovadoPor:null, retornoEm:null, observacaoRetorno:null };
+                            const idxEx = exonerados.findIndex(x => String(x.id) === String(pm.id));
+                            if (idxEx >= 0) exonerados[idxEx] = registro; else exonerados.push(registro);
+                            salvarJSON('bancoExoneradosBPE', exonerados);
 
-                    if (acao === 'exonerar') {
-                        if (!confirm(`🚨 EXONERAÇÃO\n\nTem certeza que deseja exonerar ${pm.usuario || pm.nome} (ID ${pm.id})?\n\nO policial será removido do efetivo e não poderá entrar novamente sem autorização do Alto Comando.`)) return;
-
-                        const exonerados = lerJSON('bancoExoneradosBPE', []);
-                        const registro = {
-                            id: String(pm.id),
-                            usuario: pm.usuario || pm.nome,
-                            data: new Date().toLocaleString('pt-BR'),
-                            exoneradoPor: localStorage.getItem('usuarioLogado') || 'Alto Comando',
-                            retornouAoBatalhao: false,
-                            retornoAprovadoPor: null,
-                            retornoEm: null,
-                            observacaoRetorno: null
-                        };
-                        const idxEx = exonerados.findIndex(x => String(x.id) === String(pm.id));
-                        if (idxEx >= 0) exonerados[idxEx] = registro;
-                        else exonerados.push(registro);
-                        salvarJSON('bancoExoneradosBPE', exonerados);
-
-                        // Mantém o cadastro de autenticação para preservar a senha pessoal,
-                        // mas marca o policial como exonerado e bloqueia o login.
-                        const usuariosLogin = lerJSON('usuariosBPE', []);
-                        const uidx = usuariosLogin.findIndex(u => String(u.id) === String(pm.id));
-                        if (uidx >= 0) {
-                            usuariosLogin[uidx].status = 'exonerado';
-                            usuariosLogin[uidx].acessoLiberado = 'nao';
-                            usuariosLogin[uidx].aprovadoAcesso = false;
-                            salvarJSON('usuariosBPE', usuariosLogin);
+                            const usuariosLogin = lerJSON('usuariosBPE', []);
+                            const uidx = usuariosLogin.findIndex(u => String(u.id) === String(pm.id));
+                            if (uidx >= 0) {
+                                usuariosLogin[uidx].status = 'exonerado';
+                                usuariosLogin[uidx].acessoLiberado = 'nao';
+                                usuariosLogin[uidx].aprovadoAcesso = false;
+                                await bpeSalvarNuvem('usuariosBPE', usuariosLogin);
+                                localStorage.setItem('usuariosBPE', JSON.stringify(usuariosLogin));
+                            }
+                            lista.splice(indice, 1);
+                            alterou = true;
                         }
 
-                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} EXONEROU ${pm.usuario} (ID ${pm.id}). Login bloqueado até nova autorização.`);
-                        lista.splice(indice, 1);
-                    }
+                        if (!alterou) return;
 
-                    salvarJSON('bancoUsuariosBPE', lista);
-                    // Garante que promoção/rebaixamento chegue ao banco compartilhado antes de
-                    // encerrar a operação, evitando que outro navegador continue vendo a patente antiga.
-                    try { await bpeSalvarNuvem('bancoUsuariosBPE', lista); } catch (e) { console.error('[BPE] Falha ao sincronizar efetivo após alteração de patente:', e); }
-                    sincronizarUsuarioAtualNaTela();
-                    fecharMenuGestaoMilitar();
-                    atualizarTagEstagioUsuario();
-                    renderizarHierarquiaGeral();
-                    renderizarBoletinsECommunicados();
+                        // Salva primeiro no Supabase e só depois atualiza as telas. Assim nenhum
+                        // refresh periódico consegue reverter a alteração entre os dois passos.
+                        await bpeSalvarNuvem('bancoUsuariosBPE', lista);
+                        localStorage.setItem('bancoUsuariosBPE', JSON.stringify(lista));
+
+                        // Promoção/rebaixamento também atualiza o cadastro de login pelo ID.
+                        // O login não deve continuar preso ao nome/patente anterior.
+                        if (acao === 'promover' || acao === 'rebaixar') {
+                            const usuariosLogin = lerJSON('usuariosBPE', []);
+                            const uidx = usuariosLogin.findIndex(u => String(u.id) === idAlvo);
+                            if (uidx >= 0) {
+                                usuariosLogin[uidx].usuario = pm.usuario;
+                                usuariosLogin[uidx].nome = pm.usuario;
+                                usuariosLogin[uidx].patente = novaPatente;
+                                usuariosLogin[uidx].cargo = novaPatente;
+                                await bpeSalvarNuvem('usuariosBPE', usuariosLogin);
+                                localStorage.setItem('usuariosBPE', JSON.stringify(usuariosLogin));
+                            }
+                        }
+
+                        registrarLogAuditoria(`O usuário ${localStorage.getItem('usuarioLogado')} realizou ${acao.toUpperCase()} em ${pm.usuario || pm.nome} (ID ${pm.id}).`);
+                        fecharMenuGestaoMilitar();
+                        atualizarTagEstagioUsuario();
+                        renderizarHierarquiaGeral();
+                        renderizarBoletinsECommunicados();
+                    } catch (e) {
+                        console.error('[BPE] Falha na ação de gestão:', e);
+                        alert('❌ Não foi possível concluir a alteração. Verifique a conexão com o banco e tente novamente.');
+                    } finally {
+                        bpeAcaoGestaoEmAndamento = false;
+                        botoes.forEach(b => { b.disabled = false; b.style.opacity = ''; b.style.pointerEvents = ''; });
+                    }
                 }
 
                 function carregarDadosPessoais() {
