@@ -135,7 +135,7 @@
                         <path d="M50 19v8 M46 23h8" stroke="#111" stroke-width="1.5"/>
                     </svg>
                 </div>
-                <h2>BPE TÁTICO</h2>
+                <h2>BPE OPERACIONAL</h2>
                 <div style="font-size:10px;color:#d6ad00;font-weight:800;letter-spacing:1.2px;margin-top:-2px;">CAVEIRA</div>
                 <div class="user-badge">
                     <p id="user-display">Carregando...</p>
@@ -208,6 +208,12 @@
                         <div class="card-header-gray">📜 AVISOS, BOLETINS INTERNOS & ATUALIZAÇÕES</div>
                         <div class="boletins-feed" id="feed-boletins-coronel">
                             <p class="sem-registro">Nenhum aviso ou comunicado oficial publicado recentemente pelo Comando.</p>
+                        </div>
+                    </section>
+                    <section class="card" style="grid-column: span 2; border:1px solid #8b5cf6;">
+                        <div class="card-header-gray" style="border-left:4px solid #8b5cf6;">📰 NOTÍCIAS DO BATALHÃO</div>
+                        <div class="boletins-feed" id="feed-noticias-bpe">
+                            <p class="sem-registro">Nenhuma notícia publicada pelo Alto Comando.</p>
                         </div>
                     </section>
                 </div>
@@ -619,6 +625,27 @@
                             <button type="submit" class="btn-ponto iniciar" style="margin:0;">📢 PUBLICAR COMUNICADO</button>
                         </form>
                     </section>
+                    <section class="card" style="border:1px solid #8b5cf6; grid-column:span 2;">
+                        <div class="card-header-gray" style="border-left:4px solid #8b5cf6;">📰 PUBLICAR NOTÍCIA NO INÍCIO</div>
+                        <form id="form-admin-noticia" onsubmit="publicarNoticia(event)" style="padding:20px; display:flex; flex-direction:column; gap:15px;">
+                            <div class="input-group">
+                                <label>Título da Notícia</label>
+                                <input type="text" id="adm-noticia-titulo" placeholder="Ex.: Operação realizada nesta semana" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Notícia</label>
+                                <textarea id="adm-noticia-texto" class="full-width-textarea" style="min-height:130px;" placeholder="Descreva a notícia..." required></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>Foto da Notícia (opcional)</label>
+                                <div style="color:#aaa;font-size:12px;margin-bottom:6px;">Escolha uma imagem do computador ou clique no formulário e use <strong>Ctrl + V</strong> para colar.</div>
+                                <input type="file" id="adm-noticia-foto-arquivo" accept="image/*" onchange="processarFotoNoticia(this)" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%; box-sizing:border-box;">
+                                <img id="adm-noticia-preview" src="" class="hidden" style="max-width:100%;max-height:240px;margin-top:10px;border-radius:8px;border:1px solid #8b5cf6;object-fit:contain;">
+                                <input type="hidden" id="adm-noticia-base64">
+                            </div>
+                            <button type="submit" class="btn-ponto iniciar" style="margin:0;background:#8b5cf6;">📰 PUBLICAR NOTÍCIA</button>
+                        </form>
+                    </section>
                 </div>
 
                 <section class="card" style="margin-top:30px;border:1px solid #d6ad00;">
@@ -733,7 +760,7 @@
             'usuariosBPE', 'bancoUsuariosBPE', 'historicoPontosBPE', 'rankingApreensoesBPE',
             'topMateriaisBPE', 'bancoRelatoriosBPE', 'bancoLogsDelecaoBPE', 'bancoAusenciasBPE',
             'bancoBoletinsBPE', 'bancoSolicitacoesAcessoBPE', 'bancoNecrotecaBPE',
-            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bancoApreensoesBPE', 'bpePolicialDestaque', 'bpePolicialDestaqueExcluidoEm', 'historiaBPE'
+            'bancoExoneradosBPE', 'bancoHeroisBPE', 'bancoApreensoesBPE', 'bpePolicialDestaque', 'bpePolicialDestaqueExcluidoEm', 'historiaBPE', 'bancoNoticiasBPE'
         ];
         let bpeBancoPronto = false;
         let bpeSincronizando = null;
@@ -859,6 +886,7 @@
                         verificarAcessoPainelAdministrativoGeral();
                         if (typeof renderizarHierarquiaGeral === 'function') renderizarHierarquiaGeral();
                         if (typeof renderizarBoletinsECommunicados === 'function') renderizarBoletinsECommunicados();
+                        if (typeof renderizarNoticiasBPE === 'function') renderizarNoticiasBPE();
                         if (typeof renderizarMuralHerois === 'function') renderizarMuralHerois();
                         if (typeof renderizarMuralRSO === 'function') renderizarMuralRSO();
                         if (typeof renderizarMuralAusencias === 'function') renderizarMuralAusencias();
@@ -960,6 +988,7 @@
                 if (!localStorage.getItem('bancoAusenciasBPE')) salvarJSON('bancoAusenciasBPE', []);
                 if (!localStorage.getItem('bancoUsuariosBPE')) salvarJSON('bancoUsuariosBPE', []);
                 if (!localStorage.getItem('bancoBoletinsBPE')) salvarJSON('bancoBoletinsBPE', []);
+                if (!localStorage.getItem('bancoNoticiasBPE')) salvarJSON('bancoNoticiasBPE', []);
                 if (!localStorage.getItem('bancoSolicitacoesAcessoBPE')) salvarJSON('bancoSolicitacoesAcessoBPE', []);
                 if (!localStorage.getItem('bancoNecrotecaBPE')) salvarJSON('bancoNecrotecaBPE', []);
                 if (!localStorage.getItem('bancoExoneradosBPE')) salvarJSON('bancoExoneradosBPE', []);
@@ -1361,8 +1390,13 @@
 
                     if (!idPolicialSelecionadoGeral) return;
 
+                    // Sempre releia o efetivo compartilhado antes da ação.
+                    // Isso evita que uma cópia antiga do navegador faça a patente "voltar"
+                    // ou que o popup opere sobre um registro desatualizado.
+                    try { await bpeForcarSincronizacao(); } catch (_) {}
                     let lista = lerJSON('bancoUsuariosBPE', []);
-                    const indice = lista.findIndex(pm => String(pm.id) === String(idPolicialSelecionadoGeral));
+                    const idAlvo = String(idPolicialSelecionadoGeral);
+                    const indice = lista.findIndex(pm => String(pm.id) === idAlvo);
                     if (indice === -1) {
                         alert("Policial não encontrado.");
                         return;
@@ -2074,6 +2108,13 @@ function removerPrintApreensao(indice){
                         const file=imagem.getAsFile();
                         if(file) processarFotoVeiculoArquivo(file);
                     }
+                    const abaCoronel=document.getElementById('content-coronel');
+                    const formNoticia=document.getElementById('form-admin-noticia');
+                    if(abaCoronel && !abaCoronel.classList.contains('hidden') && formNoticia && formNoticia.contains(event.target)){
+                        event.preventDefault();
+                        const file=imagem.getAsFile();
+                        if(file) processarFotoNoticiaArquivo(file);
+                    }
                 });
 
                 function processarFotoVeiculoArquivo(file){
@@ -2278,6 +2319,7 @@ function removerPrintApreensao(indice){
                         ['bancoRelatoriosBPE','Relatórios / RSO / Guincho'],
                         ['bancoAusenciasBPE','Ausências / Licenças'],
                         ['bancoBoletinsBPE','Avisos e Boletins'],
+                        ['bancoNoticiasBPE','Notícias do Batalhão'],
                         ['bpePolicialDestaque','Policial da Semana'],
                         ['rankingApreensoesBPE','Ranking de Apreensões'],
                         ['topMateriaisBPE','Materiais Apreendidos'],
@@ -2366,6 +2408,67 @@ function removerPrintApreensao(indice){
                     await bpeSalvarNuvem('bpePolicialDestaque',dados);
                     document.getElementById('form-admin-destaque').reset();document.getElementById('adm-destaque-preview').classList.add('hidden');document.getElementById('adm-destaque-base64').value="";renderizarBoletinsECommunicados();alert("Policial Destaque publicado!");
                 }
+                function processarFotoNoticiaArquivo(file){
+                    if(!file) return;
+                    const leitor=new FileReader();
+                    leitor.onload=e=>{
+                        const base=document.getElementById('adm-noticia-base64');
+                        const preview=document.getElementById('adm-noticia-preview');
+                        if(base) base.value=e.target.result;
+                        if(preview){ preview.src=e.target.result; preview.classList.remove('hidden'); }
+                    };
+                    leitor.readAsDataURL(file);
+                }
+                function processarFotoNoticia(input){
+                    if(input.files?.[0]) processarFotoNoticiaArquivo(input.files[0]);
+                }
+                function publicarNoticia(event){
+                    event.preventDefault();
+                    if(!podeGerenciarPainelAltoComando()){alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");return;}
+                    const titulo=String(document.getElementById('adm-noticia-titulo')?.value||'').trim();
+                    const texto=String(document.getElementById('adm-noticia-texto')?.value||'').trim();
+                    const foto=String(document.getElementById('adm-noticia-base64')?.value||'');
+                    if(!titulo || !texto){alert('⚠️ Informe o título e o texto da notícia.');return;}
+                    const banco=lerJSON('bancoNoticiasBPE',[]);
+                    banco.unshift({
+                        id:Date.now(),
+                        titulo,
+                        texto,
+                        foto,
+                        autor:localStorage.getItem('usuarioLogado')||'Alto Comando',
+                        data:new Date().toLocaleString('pt-BR')
+                    });
+                    salvarJSON('bancoNoticiasBPE',banco.slice(0,50));
+                    document.getElementById('form-admin-noticia')?.reset();
+                    document.getElementById('adm-noticia-base64').value='';
+                    document.getElementById('adm-noticia-preview')?.classList.add('hidden');
+                    renderizarNoticiasBPE();
+                    alert('📰 Notícia publicada no Início.');
+                }
+                function excluirNoticia(id){
+                    if(!podeGerenciarPainelAltoComando()){alert('🔒 Somente o Alto Comando pode excluir notícias.');return;}
+                    const banco=lerJSON('bancoNoticiasBPE',[]);
+                    const alvo=banco.find(n=>String(n.id)===String(id));
+                    if(!alvo || !confirm('Excluir esta notícia?')) return;
+                    salvarJSON('bancoNoticiasBPE',banco.filter(n=>String(n.id)!==String(id)));
+                    renderizarNoticiasBPE();
+                }
+                function renderizarNoticiasBPE(){
+                    const feed=document.getElementById('feed-noticias-bpe');
+                    if(!feed) return;
+                    const lista=lerJSON('bancoNoticiasBPE',[]);
+                    feed.innerHTML=lista.length ? lista.map(n=>{
+                        const foto=n.foto ? `<img src="${n.foto}" alt="Foto da notícia" style="width:100%;max-height:320px;object-fit:contain;border-radius:8px;margin-top:12px;background:#111;">` : '';
+                        const excluir=podeGerenciarPainelAltoComando() ? `<button class="admin-delete" style="margin-top:12px;" onclick="excluirNoticia('${String(n.id).replace(/'/g,"\\'")}')">🗑️ EXCLUIR</button>` : '';
+                        return `<article style="background:#1c1c1e;padding:16px;border-radius:8px;margin-bottom:12px;border-left:4px solid #8b5cf6;">
+                            <strong style="color:#fff;font-size:16px;display:block;">📰 ${escaparHTMLApreensao(String(n.titulo)).toUpperCase()}</strong>
+                            <span style="color:#8e8e93;font-size:11px;">Publicado por ${escaparHTMLApreensao(String(n.autor||'Alto Comando'))} em ${escaparHTMLApreensao(String(n.data||''))}</span>
+                            <p style="color:#ddd;font-size:14px;margin-top:10px;white-space:pre-wrap;line-height:1.6;">${escaparHTMLApreensao(String(n.texto||''))}</p>
+                            ${foto}${excluir}
+                        </article>`;
+                    }).join('') : '<p class="sem-registro">Nenhuma notícia publicada pelo Alto Comando.</p>';
+                }
+
                 function publicarBoletimOficial(event){
                     event.preventDefault();if(!podeGerenciarPainelAltoComando()){alert("🔒 Acesso negado. Esta área é exclusiva do Alto Comando.");return;}
                     const banco=lerJSON('bancoBoletinsBPE',[]);
@@ -2404,6 +2507,7 @@ function removerPrintApreensao(indice){
                         if(txtTexto) txtTexto.textContent='Nenhum policial fixado como destaque pelo comando para esta semana ainda.';
                     }
                     const feed=document.getElementById('feed-boletins-coronel');if(feed){const lista=lerJSON('bancoBoletinsBPE',[]);feed.innerHTML=lista.length?lista.map(b=>`<div style="background:#1c1c1e;padding:15px;border-radius:6px;margin-bottom:12px;border-left:3px solid #0052cc;position:relative;"><strong style="color:#fff;font-size:14px;display:block;padding-right:90px;">📢 ${String(b.titulo).toUpperCase()}</strong><span style="color:#8e8e93;font-size:11px;">Publicado por ${b.oficial} em ${b.data}</span><p style="color:#aeaea3;font-size:13px;margin-top:8px;white-space:pre-wrap;">${b.texto}</p><button class="admin-delete" style="position:absolute;top:12px;right:12px;" onclick="excluirBoletimOficial('${b.id}')">🗑️ EXCLUIR</button></div>`).join(''):'<p class="sem-registro">Nenhum aviso publicado.</p>';}
+                    renderizarNoticiasBPE();
                     const tabela=document.getElementById('tabela-logs-auditoria-coronel');
                     renderizarSolicitacoesAcesso(); renderizarPainelApagarTudo();
                     if(tabela){const logs=lerJSON('bancoLogsDelecaoBPE',[]);tabela.innerHTML=logs.length?logs.map(l=>`<tr><td style="color:#ff1744;font-size:12px;white-space:nowrap;font-weight:bold;">${l.dataHora}</td><td style="color:#aeaea3;font-size:13px;">${l.mensagem}</td></tr>`).join(''):'<tr><td colspan="2" class="sem-registro">Nenhum log registrado.</td></tr>';}
