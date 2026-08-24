@@ -135,7 +135,7 @@
                         <path d="M50 19v8 M46 23h8" stroke="#111" stroke-width="1.5"/>
                     </svg>
                 </div>
-                <h2>BPE TÁTICO</h2>
+                <h2>BPE OPERACIONAL</h2>
                 <div style="font-size:10px;color:#d6ad00;font-weight:800;letter-spacing:1.2px;margin-top:-2px;">CAVEIRA</div>
                 <div class="user-badge">
                     <p id="user-display">Carregando...</p>
@@ -640,7 +640,8 @@
                                 <label>Foto da Notícia (opcional)</label>
                                 <div style="color:#aaa;font-size:12px;margin-bottom:6px;">Escolha uma imagem do computador ou clique no formulário e use <strong>Ctrl + V</strong> para colar.</div>
                                 <input type="file" id="adm-noticia-foto-arquivo" accept="image/*" onchange="processarFotoNoticia(this)" style="padding:11px; background:#2c2c2e; border:1px solid #3a3a3c; color:white; border-radius:6px; width:100%; box-sizing:border-box;">
-                                <img id="adm-noticia-preview" src="" class="hidden" style="max-width:100%;max-height:240px;margin-top:10px;border-radius:8px;border:1px solid #8b5cf6;object-fit:contain;">
+                                <img id="adm-noticia-preview" src="" class="hidden" style="max-width:100%;
+try{mostrarBotaoRemoverImagemNoticia();}catch(_e){}max-height:240px;margin-top:10px;border-radius:8px;border:1px solid #8b5cf6;object-fit:contain;">
                                 <input type="hidden" id="adm-noticia-base64">
                             </div>
                             <button type="submit" class="btn-ponto iniciar" style="margin:0;background:#8b5cf6;">📰 PUBLICAR NOTÍCIA</button>
@@ -2702,5 +2703,42 @@ function removerPrintApreensao(indice){
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', repararEstruturaAbasBPE, {once:true});
 })();
 </script>
+
+<script>
+function removerImagemNoticia(){
+    const ids = ['noticia-foto-base64','noticiaFotoBase64','noticia-imagem-base64','news-foto-base64','newsFotoBase64'];
+    ids.forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.value='';
+    });
+
+    const fileIds = ['noticia-foto-arquivo','noticiaFotoArquivo','noticia-imagem-arquivo','news-foto-arquivo','newsFotoArquivo'];
+    fileIds.forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.value='';
+    });
+
+    const previews = ['noticia-preview-img','noticia-preview','news-preview-img','news-preview'];
+    previews.forEach(id=>{
+        const el=document.getElementById(id);
+        if(el){
+            el.src='';
+            el.classList.add('hidden');
+            el.style.display='none';
+        }
+    });
+
+    const btn=document.getElementById('btn-remover-imagem-noticia');
+    if(btn) btn.style.display='none';
+
+    if(typeof window.imagemNoticiaAtual !== 'undefined') window.imagemNoticiaAtual=null;
+}
+
+function mostrarBotaoRemoverImagemNoticia(){
+    const btn=document.getElementById('btn-remover-imagem-noticia');
+    if(btn) btn.style.display='inline-block';
+}
+</script>
+
 </body>
 </html>
